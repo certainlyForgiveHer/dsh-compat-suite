@@ -1,0 +1,156 @@
+name: Implementation task
+description: Define a scoped implementation task for one active agent and auditable coordination.
+title: "[Task] "
+labels:
+  - "status:draft"
+  - "type:implementation"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This Issue is a coordination record, not a lock. Do not begin writing until the task is `status:ready` and a coordinator has posted a valid `CLAIM_CONFIRMED` event.
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: State one observable outcome. Avoid describing only activity.
+      placeholder: The repository can...
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: State behavior, files, systems, or follow-up work explicitly excluded.
+      placeholder: This task does not...
+    validations:
+      required: true
+
+  - type: input
+    id: parent
+    attributes:
+      label: Parent issue or milestone
+      description: Link the parent Issue and name the milestone, or write "none".
+      placeholder: "#123 / C2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: List blocked-by and blocking Issues, including why the dependency exists.
+      placeholder: |
+        blocked_by:
+          - "#120: report schema must be frozen"
+        blocking:
+          - "#124: CLI reporter"
+    validations:
+      required: true
+
+  - type: input
+    id: scope_revision
+    attributes:
+      label: Scope revision
+      description: Start at 1 and increment whenever objective, scope, shared interfaces, or acceptance criteria change.
+      value: "1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: write_scope
+    attributes:
+      label: Write scope
+      description: List exact repository-relative files or directory prefixes that the implementation agent may change.
+      placeholder: |
+        - packages/core/src/rules/
+        - tests/rules/
+        - docs/01-cli-design.md
+    validations:
+      required: true
+
+  - type: textarea
+    id: forbidden_scope
+    attributes:
+      label: Forbidden scope
+      description: List paths, production data, external systems, and actions that this task must not modify.
+      placeholder: |
+        - packages/dsh-plugin/
+        - real DSH profiles and ~/.pm2
+        - release publishing
+    validations:
+      required: true
+
+  - type: textarea
+    id: shared_interfaces
+    attributes:
+      label: Shared interfaces
+      description: List schemas, exports, rule formats, lockfiles, workflows, or cross-package contracts touched; write "none" only after checking.
+      placeholder: |
+        - schemas/report-v1.schema.json
+        - @dsh-compat/core/rules export
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Provide independently checkable completion conditions.
+      placeholder: |
+        - [ ] Known incompatible fixture cannot produce a green result
+        - [ ] Public schema remains valid
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification plan
+      description: Name exact tests, fixtures, negative cases, and evidence to retain.
+      placeholder: Commands, test IDs, expected failures, and expected artifacts.
+    validations:
+      required: true
+
+  - type: textarea
+    id: security_rollback
+    attributes:
+      label: Security, privacy, and rollback
+      description: Explain trust boundaries, data exposure, destructive risks, and a recoverable rollback path.
+      placeholder: No real profile access; revert the squash commit if validation fails.
+    validations:
+      required: true
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: Documentation impact
+      description: List documents to update or explain why no documentation change is needed.
+      placeholder: docs/01-cli-design.md and CHANGELOG.md
+    validations:
+      required: true
+
+  - type: input
+    id: expected_update_interval
+    attributes:
+      label: Expected update interval
+      description: Proposed interval for progress review. This is a staleness signal, not a lock lease.
+      placeholder: 4 hours
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: coordination_acknowledgements
+    attributes:
+      label: Coordination acknowledgements
+      options:
+        - label: I understand that Issue metadata records coordination and does not lock files or branches.
+          required: true
+        - label: The task must be marked `status:ready` before an Agent can request a claim.
+          required: true
+        - label: No implementation write is allowed before a coordinator posts `CLAIM_CONFIRMED`.
+          required: true
+        - label: Scope expansion and handoff require new recorded confirmation events.
+          required: true

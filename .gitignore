@@ -1,0 +1,21 @@
+# Operating-system files
+.DS_Store
+Thumbs.db
+
+# Node.js and package-manager output
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Local runtime output
+*.log
+logs/
+tmp/
+.cache/
