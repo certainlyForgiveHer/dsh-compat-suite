@@ -21,14 +21,14 @@ CLI 是升级前安全闸门和故障后的诊断入口。dsh 插件只消费 CL
 - 在不修改真实 profile 的前提下分析候选升级版本。
 - 在临时 `DSH_HOME` 和隔离端口中启动 dsh，验证插件组合能否加载。
 - 以人类可读文本和稳定 JSON 两种格式输出结果。
-- 提供稳定退出码，供 CI、升级脚本或 PM2 外层流程使用。
+- 提供稳定退出码，供 CI、升级脚本或外层进程管理器/服务监督器流程使用。
 - 所有结论包含证据、来源和置信等级。
 
 ### 2.2 MVP 非目标
 
-- 不自动修改真实 `package.json`、lockfile、`cordis.patch.yml` 或 PM2 配置。
+- 不自动修改真实 `package.json`、lockfile、`cordis.patch.yml` 或进程管理器/服务监督器配置。
 - 不自动安装、升级、降级或删除插件。
-- 不自动执行 `pm2 restart`、`pm2 save` 或系统服务操作。
+- 不自动重启正式 dsh、保存或修改进程管理器/服务监督器状态，也不执行其管理命令（例如 PM2 的 `restart`、`save`）或系统服务操作。
 - 不读取模型凭据、会话内容、插件业务数据或用户工作区文件。
 - 不保证插件所有业务功能正确；启动烟雾测试只证明定义范围内的启动兼容性。
 - 不把任意 Git 仓库、文件路径或未固定版本当作可安全执行的候选包。
@@ -66,7 +66,7 @@ CLI command
          └── evidence bundle
 ```
 
-共享内核必须是无 UI、无 PM2 写操作、无 shell 拼接的 TypeScript 库。CLI 只负责参数解析、进程生命周期和输出格式。
+共享内核必须是无 UI、无进程管理器/服务监督器写操作、无 shell 拼接的 TypeScript 库。CLI 只负责参数解析、进程生命周期和输出格式。
 
 ## 4. 术语与结果语义
 
@@ -338,7 +338,7 @@ ctx.subagents.registerContinuableSetup(...)
 - 使用独立 `DSH_HOME`；
 - 生成独立测试 profile；
 - 使用独立 loopback 端口；
-- 不连接真实 PM2 app；
+- 不连接真实 dsh service/app 或其进程管理器/服务监督器；
 - 不读取或写入真实插件业务数据；
 - 默认不复制 credentials；
 - 所有子进程在超时、异常和 Ctrl-C 时均被回收；
@@ -377,7 +377,7 @@ ctx.subagents.registerContinuableSetup(...)
 - `failed to apply loader entry`；
 - `is not a function`、`missing service`、`cannot get required service`；
 - 未捕获异常和 promise rejection；
-- PM2 式快速退出/重启模式；
+- 进程管理器/服务监督器驱动的快速退出/重启循环；
 - 同一错误在观察窗口内高频重复；
 - ready 后端口消失。
 

@@ -16,9 +16,9 @@ Both surfaces share the same scanning core and versioned report contract. The CL
 ## Safety boundaries
 
 - Read-only by default.
-- The MVP does not install, upgrade, downgrade, remove plugins, or restart PM2.
+- The MVP does not install, upgrade, downgrade, or remove plugins, restart the dsh host or service, or alter its process-supervisor configuration.
 - Candidate packages are unpacked in temporary directories; lifecycle scripts are not executed.
-- Real DSH profiles, credentials, sessions, PM2 data, and unredacted logs are outside the repository and scan scope.
+- Real DSH profiles, credentials, sessions, process-supervisor state (including PM2 state where applicable), and unredacted logs are outside the repository and scan scope.
 - Insufficient evidence produces `unknown`; startup validation does not claim that every plugin feature has passed.
 
 ## Project status

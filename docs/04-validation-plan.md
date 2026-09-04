@@ -5,7 +5,7 @@
 本方案优先防止两类严重错误：
 
 1. false green：实际不兼容的组合被报告为兼容并获准升级；
-2. 测试污染：检查器修改或干扰了真实 dsh profile、PM2 服务、端口、插件数据或凭据。
+2. 测试污染：检查器修改或干扰了真实 dsh profile、进程管理器/服务监督器、端口、插件数据或凭据。
 
 协作治理还必须防止第三类错误：Issue 或 label 被误当成锁，使多个 Agent 在重叠范围内并行写入，或让无确认、过期、越界的工作进入 PR。
 
@@ -17,7 +17,7 @@
 - 单元测试使用最小合成 fixture；真实第三方包只用于受控集成/发布验收。
 - 真实包按精确版本和 integrity 固定，不能依赖 `latest`。
 - 每个历史事故先建立能失败的回归用例，再修改规则。
-- 测试默认运行在临时目录、临时 `DSH_HOME`、临时端口和 disposable PM2_HOME。
+- 测试默认运行在临时目录、临时 `DSH_HOME`、临时端口和 disposable 进程管理器/服务监督器状态（如 PM2 的 `PM2_HOME`）。
 - 自动化测试不读取真实 credentials、sessions、storages 或工作区内容。
 - smoke 成功只证明规定的启动覆盖范围，报告必须列出未验证功能。
 - 所有失败路径都验证进程、端口和临时资源清理。
@@ -33,7 +33,7 @@ L2  Contract             CLI, JSON, exit code, Host API
 L3  Integration          temp profile, registry stub, safe tar, lockfile
 L4  Process smoke        real dsh child process, ready, HTTP, shutdown
 L5  Plugin E2E           real Host + browser UI
-L6  System acceptance    CLI ↔ report ↔ plugin ↔ disposable PM2 flow
+L6  System acceptance    CLI ↔ report ↔ plugin ↔ disposable process-supervisor flow
 L7  Security/reliability fault injection across all layers
 L8  Repository/release   Git topology, package identity, provenance, listing conformance
 L9  Collaboration        issue ledger, claim events, scope conflict, handoff, PR traceability
@@ -57,7 +57,7 @@ L0-L3 每个 PR 必跑；L4-L5 在合并前或受控 CI lane 必跑；L6-L7 在 
 
 | 平台 | 必测范围 |
 | --- | --- |
-| macOS arm64 | 全部 CLI、真实 dsh smoke、插件 E2E、PM2 集成；首发阻断平台 |
+| macOS arm64 | 全部 CLI、真实 dsh smoke、插件 E2E、进程管理器/服务监督器集成；首发阻断平台 |
 | Linux x64 | L0-L4；若声明插件支持，则增加 L5 |
 | Windows | 仅在正式声明支持后进入阻断矩阵；此前运行 parser/contract 测试但不宣称 dsh runtime 兼容 |
 
@@ -334,15 +334,15 @@ offline 模式安装网络调用拦截器，任何非 loopback socket 尝试都�
 
 视觉验收保存关键状态截图，但截图不替代 DOM、API 和可访问性断言。
 
-## 13. L6：系统与 PM2 集成
+## 13. L6：系统与进程管理器/服务监督器集成
 
 ### 13.1 隔离要求
 
-- 创建临时 PM2_HOME；
+- 创建临时进程管理器/服务监督器状态（如 PM2 的 `PM2_HOME`）；
 - 使用测试 app 名和独立端口；
-- 不读取或写入用户真实 `~/.pm2`；
-- 不对正式 `dsh-service` 执行 start/stop/restart/save；
-- 测试结束后只清理测试 PM2 daemon 和已记录 PID。
+- 不读取或写入用户真实进程管理器/服务监督器状态（如 `~/.pm2`）；
+- 不通过任何进程管理器/服务监督器对正式 `dsh-service` 执行 start/stop/restart，也不持久化或修改其管理器状态；
+- 测试结束后只清理隔离的测试进程管理器/服务监督器实例和已记录 PID。
 
 ### 13.2 场景
 
@@ -360,7 +360,7 @@ offline 模式安装网络调用拦截器，任何非 loopback socket 尝试都�
 系统测试前后比较：
 
 - 正式 profile 文件摘要；
-- 正式 PM2 process list；
+- 正式进程管理器/服务监督器 process list；
 - 正式 dsh PID 和端口；
 - 插件 storage 目录摘要；
 - credentials 文件 metadata。
@@ -414,7 +414,7 @@ offline 模式安装网络调用拦截器，任何非 loopback socket 尝试都�
 
 - `git rev-parse --show-toplevel` 必须精确解析到 `dsh-compat-suite/`；
 - 从产品根向下扫描，除根 `.git` 外不得出现嵌套 Git repo、submodule 或 subtree；
-- 父级 workspace、真实 DSH home、PM2 home 和外部 awesome-list fork 不得成为 tracked path；
+- 父级 workspace、真实 DSH home、进程管理器/服务监督器状态目录和外部 awesome-list fork 不得成为 tracked path；
 - 根 `package.json` 必须为 `private: true`，并固定 package manager 版本；
 - 只允许根目录存在 `pnpm-lock.yaml`，package 目录不得出现第二个 lockfile；
 - canonical remote、默认分支、package repository 和 CI badge/link 必须指向同一仓库；
@@ -438,7 +438,7 @@ offline 模式安装网络调用拦截器，任何非 loopback socket 尝试都�
 ### 15.3 Tracked file 与 fixture 治理
 
 - tracked files secret scan 不得发现 token、私钥、credential、真实 session 或环境变量值；
-- 路径扫描不得出现未经允许的用户名、本机绝对路径、真实 profile 或 PM2 日志；
+- 路径扫描不得出现未经允许的用户名、本机绝对路径、真实 profile 或进程管理器/服务监督器日志；
 - `fixtures/sources.lock.json` 中每个真实工件都有精确 identity、integrity/SHA、许可证、来源、用例和复核日期；
 - 默认不提交第三方完整 tarball、core dump 或大于 1 MiB 的二进制；
 - golden fixture 必须确定、脱敏，并有 README 解释唯一预期结论；
@@ -557,7 +557,7 @@ G1 使用两类证据：
 1. 静态/fixture 验证：YAML、Markdown、event schema、状态机、路径比较和 PR gate；
 2. 真实演练：至少两个 Agent 或两个受控模拟身份，在独立 worktree 完成一次竞态、一次冲突拒绝、一次无冲突并行和一次 handoff。
 
-人工演练记录不得包含 credentials 或真实 DSH/PM2 数据。只有两类证据同时通过，才能记录 `G1 accepted`。
+人工演练记录不得包含 credentials 或真实 DSH、进程管理器/服务监督器数据。只有两类证据同时通过，才能记录 `G1 accepted`。
 
 ## 17. 性能验证
 
@@ -591,7 +591,7 @@ G1 使用两类证据：
 | P1 | L0-L3 Host API、故障隔离 |
 | P2 | L2、L5 UI/accessibility |
 | P3 | L3、L5 candidate/digest/security |
-| I1 | K01-K08、L4-L7、PM2 不变性审计 |
+| I1 | K01-K08、L4-L7、进程管理器/服务监督器不变性审计 |
 | R1 | 全部阻断 lane、L8 package/release、L9 traceability、clean-room、回退演练 |
 | R2 | L8 awesome-list 投稿一致性、上游 CI |
 
@@ -609,7 +609,7 @@ Release candidate 必须满足：
 - candidate 分析未执行 lifecycle script；
 - CLI 与 UI 对同一报告给出相同总体状态；
 - 报告和 UI 无测试 secret 泄漏；
-- 正式 profile/PM2/插件数据不变性审计通过；
+- 正式 profile、进程管理器/服务监督器和插件数据不变性审计通过；
 - clean-room 安装和回退演练通过；
 - 产品树只有一个 Git 根和一个 lockfile，测试后工作树 clean；
 - tag、三个 package、精确内部依赖和 CHANGELOG 版本一致；
@@ -639,7 +639,7 @@ evidence/
 ├── repository-conformance/
 ├── package-inspection/
 ├── performance/
-├── pm2-isolation-audit/
+├── process-supervisor-isolation-audit/
 ├── clean-room-install/
 └── rollback/
 ```
@@ -664,12 +664,12 @@ ecosystem-submission/
 
 1. 对当前 profile 运行 offline scan；
 2. 对目标候选运行 check-update；
-3. 确认真实 profile 和 PM2 状态 before snapshot；
+3. 确认真实 profile 和进程管理器/服务监督器状态 before snapshot；
 4. 运行隔离 smoke，确认使用临时 DSH_HOME 和非生产端口；
 5. 检查报告无凭据、token 和会话内容；
 6. 在测试 dsh 实例打开插件 UI，核对 CLI/UI 状态一致；
 7. 检查进程、端口和临时目录清理；
-8. 确认生产 profile、PM2 进程和插件数据未变化；
+8. 确认生产 profile、进程管理器/服务监督器管理的进程和插件数据未变化；
 9. 按升级流程演练一次阻断和一次通过；
 10. 演练回退并保存证据。
 

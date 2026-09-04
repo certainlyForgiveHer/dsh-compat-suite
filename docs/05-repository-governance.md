@@ -11,8 +11,10 @@
 
 - `dsh-compat-doctor` CLI 仍是宿主进程之外的权威兼容性闸门；
 - dsh Compatibility 插件仍是只读可视化入口；
-- MVP 不自动安装、升级、降级、删除插件或重启正式 PM2 服务；
+- MVP 不自动安装、升级、降级或删除插件，不自动重启正式 dsh 服务，也不修改其进程管理器/服务监督器配置；
 - `awesome-dsh-plugin` 收录不等同于安全审计，也不改变本项目自己的发布门槛。
+
+本文中的“进程管理器/服务监督器”是泛称，涵盖 PM2、systemd、launchd、容器运行时或其他负责维持 dsh 进程的机制。PM2 仅是可选的适配/测试对象；未明确限定为 PM2 lane 的约束，均适用于所有管理方式。
 
 ## 2. 决策摘要
 
@@ -26,7 +28,7 @@
 6. report schema 自带独立 `schemaVersion`，不能用 npm 版本代替协议版本。
 7. 兼容规则、schema 和跨包测试必须与消费它们的代码在同一个提交中原子更新。
 8. `awesome-dsh-plugin` 使用产品仓库之外的独立 fork/checkout；它不是构建依赖，也不进入 lockfile。
-9. 真实 DSH profile、PM2 数据、credentials、运行日志和 smoke 临时目录不得进入 Git。
+9. 真实 DSH profile、进程管理器/服务监督器状态（例如 PM2 数据）、credentials、运行日志和 smoke 临时目录不得进入 Git。
 10. 发布证据默认保存在 CI artifact/GitHub Release；源码仓库只保存可复现定义、固定摘要和小型脱敏 golden fixture。
 11. GitHub Issue 只作为任务范围、认领事件、进度和交接的协调账本，不作为文件、分支或任务锁。
 12. 一个 Issue 同时只记录一个活跃实现 Agent；该约束通过 `AGENTS.md`、协调者确认、独立 worktree 和 PR 验收执行，不声称 GitHub 提供原子互斥。
@@ -49,7 +51,7 @@
 规则：
 
 - 不在 `<workspace>` 初始化一个包住所有项目的父级 Git 仓库。
-- 不把 `awesome-dsh-plugin-fork/`、真实 DSH home 或 PM2 home 放进产品仓库。
+- 不把 `awesome-dsh-plugin-fork/`、真实 DSH home 或进程管理器/服务监督器状态目录（例如 PM2 home）放进产品仓库。
 - 临时 worktree 使用主仓库的 Git 元数据，但 checkout 位于产品根之外；测试脚本不能假定只有一个 checkout。
 - 第三方插件源码不得通过 submodule/subtree 永久嵌入。需要真实工件时按精确版本和 integrity 获取。
 - CI checkout、发布 checkout 和开发 checkout 都必须能从单一仓库独立恢复。
@@ -259,7 +261,7 @@ doctor ───────X dsh-plugin
 | PR | L0-L3、package pack、边界检查 | 无发布 secrets |
 | 合并到 `main` | 重跑 PR 门槛、构建候选工件 | 只写 CI artifact |
 | Nightly | 受控 L4-L5、漂移检测 | 最小读取权限 |
-| Release candidate | L0-L7、矩阵、PM2 隔离、clean-room | 受保护环境 |
+| Release candidate | L0-L7、矩阵、进程管理器/服务监督器隔离、clean-room | 受保护环境 |
 | Release | 对已验证摘要对应的工件发布 | npm provenance、GitHub Release |
 
 发布 job 只能消费同一 commit 已通过验证且按 digest 固定的工件，不得在发布阶段重新构建一套无法与 CI 工件对应的 tarball。
@@ -280,7 +282,7 @@ doctor ───────X dsh-plugin
 ### 8.2 默认禁止提交
 
 - `node_modules/`、`dist/`、coverage、临时 cache；
-- 真实 `DSH_HOME`、profile、PM2 home 或 PM2 日志；
+- 真实 `DSH_HOME`、profile、进程管理器/服务监督器状态目录或其日志（例如 PM2 home/logs）；
 - `.env`、token、credentials、session、storage 和用户工作区内容；
 - 未脱敏崩溃日志、core dump、浏览器 profile；
 - 从 npm/GitHub 下载的第三方完整源码或 tarball；
@@ -333,7 +335,7 @@ test-results/
 此外，测试和脚本必须拒绝把以下路径解析为产品仓库子目录：
 
 - 用户真实 DSH home/profile；
-- `~/.pm2` 或其他真实 PM2 home；
+- 进程管理器/服务监督器的真实状态目录（例如 `~/.pm2`）；
 - credentials/session/storage 目录；
 - 产品仓库外部的 symlink 目标。
 
@@ -528,7 +530,7 @@ ADR 至少包含上下文、决策、替代方案、迁移步骤、安全影响�
 - `AGENTS.md`、Issue/PR 模板、ADR-0001 和协作协议已通过 G1，且明确 Issue 不作锁；
 - 认领、冲突、scope revision、陈旧状态和 handoff 已在独立 worktree 中演练并保存证据；
 - fixture 来源清单、许可证和摘要完整；
-- secret/path 扫描证明仓库不含真实 DSH/PM2/credential 数据；
+- secret/path 扫描证明仓库不含真实 DSH、进程管理器/服务监督器或 credential 数据；
 - lockstep 版本、schemaVersion 和 tag 规则被 release test 验证；
 - 三个 tarball 可从同一 release commit 重现并与发布摘要一致；
 - canonical remote、npm scope 发布权限和许可证已经明确验证；

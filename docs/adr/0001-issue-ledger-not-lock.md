@@ -67,7 +67,7 @@ MVP 拒绝。它会成为额外信任根和单点故障，需要身份认证、�
 
 ## 安全与隐私
 
-- Issue 中不得粘贴 token、credential、真实 DSH session、插件 storage 或未脱敏 PM2 日志。
+- Issue 中不得粘贴 token、credential、真实 DSH session、插件 storage 或未脱敏进程管理器/服务监督器日志（例如 PM2 日志）。
 - Issue Form 和未来自动化不得把自由文本直接拼接为 shell 命令。
 - fork PR 和外部 Issue 内容视为不可信输入。
 - 协调记录不授权扩大产品扫描范围，也不改变 CLI/插件默认只读边界。

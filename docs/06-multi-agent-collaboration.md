@@ -24,7 +24,7 @@
 - 把 assignee、label、Project 字段、评论、分支或 worktree 描述成锁；
 - 允许一个 Issue 覆盖不相关的多个实现目标；
 - 代替 Git merge、CI、CODEOWNERS、安全评审或产品验收；
-- 使用协调记录授权访问真实 DSH profile、PM2 数据、凭据或发布 secrets；
+- 使用协调记录授权访问真实 DSH profile、进程管理器/服务监督器数据、凭据或发布 secrets；
 - 在 MVP 中构建复杂的 `/claim` Bot。
 
 “未确认不得写入”是一条 fail-closed 的参与者规则，不是技术互斥承诺。正式决策见
@@ -526,7 +526,7 @@ G0/G1 必须实测当前仓库和账号计划的能力，不能沿用其他仓�
 - 自动化只接受枚举 event、规范化 repo-relative path、完整 SHA 和 ISO 8601 时间。
 - fork PR 工作流不读取发布 secrets，不执行未审查第三方代码或真实 DSH smoke。
 - Issue 不保存 token、credential、真实会话、storage、未脱敏日志或用户工作区内容。
-- 协调者确认只授权仓库范围内工作，不授权发布 npm、修改 GitHub 设置、重启 PM2 或操作真实 profile。
+- 协调者确认只授权仓库范围内工作，不授权发布 npm、修改 GitHub 设置、重启正式 dsh 或操作进程管理器/服务监督器、真实 profile。
 - 删除 branch/worktree、强制推送、关闭外部 PR 等破坏性动作必须有明确维护者授权和目标复核。
 - 共享账号无法证明不同 Agent 的真实身份；高风险确认需要独立维护者复核或更强身份机制。
 

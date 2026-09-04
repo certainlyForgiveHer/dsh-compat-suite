@@ -93,7 +93,7 @@ flowchart LR
 - 维护者拥有最终 npm scope，根/package 许可证元数据一致；
 - PR workflow 在无 secrets 的 fork 模式下可运行；
 - `AGENTS.md`、Issue Form 和 PR 模板可从干净 checkout 读取且 YAML/Markdown 结构有效；
-- tracked files 扫描无真实 DSH/PM2 数据、credential、token 或未授权绝对路径；
+- tracked files 扫描无真实 DSH 或进程管理器/服务监督器数据、credential、token 或未授权绝对路径；
 - 测试运行后工作树保持 clean。
 
 ### 必须保存的证据
@@ -329,7 +329,7 @@ CLI 能在独立环境启动指定组合，得到可靠的 ready、稳定性、H
 
 ### 退出门槛
 
-- 不接触正式 PM2 app、正式端口和真实 plugin storage；
+- 不接触正式 dsh service/app、其进程管理器/服务监督器、正式端口和真实 plugin storage；
 - AgentTeams `0.1.15` 组合能稳定复现 loader failure；
 - 降级组合能达到 ready 并通过稳定观察窗口；
 - ready 后崩溃、日志风暴、端口消失和僵尸子进程场景均能识别；
@@ -362,7 +362,7 @@ CLI 能在独立环境启动指定组合，得到可靠的 ready、稳定性、H
 - 用户文档和故障排查；
 - npm package、provenance、SBOM；
 - CI/升级脚本集成示例；
-- disposable PM2_HOME 验证示例。
+- disposable 进程管理器/服务监督器状态验证示例（PM2 的 `PM2_HOME` 仅作为一种适配方式）。
 
 ### 退出门槛
 
@@ -380,7 +380,7 @@ CLI 能在独立环境启动指定组合，得到可靠的 ready、稳定性、H
 - package checksum、SBOM 和 provenance；
 - CLI contract test；
 - 脱敏扫描报告；
-- PM2 外层预检演示记录。
+- 进程管理器/服务监督器外层预检演示记录。
 
 ## 12. P1：插件 Host 服务
 
@@ -505,7 +505,7 @@ CLI 与插件使用同一报告语义，在真实 dsh 版本矩阵中给出一�
 
 - 完整 fixture matrix runner；
 - CLI → report file → plugin UI 的 E2E；
-- disposable PM2_HOME 集成测试；
+- disposable 进程管理器/服务监督器集成测试；
 - upgrade preflight 示例；
 - rollback rehearsal；
 - 性能和资源报告。
@@ -515,7 +515,7 @@ CLI 与插件使用同一报告语义，在真实 dsh 版本矩阵中给出一�
 - 本次六个关键组合全部得到预期结论；
 - 已知不兼容组合零 false green；
 - CLI 和 UI 对同一 report 的总体状态一致；
-- 正式 dsh profile、PM2_HOME、端口和插件数据在测试前后 digest/状态不变；
+- 正式 dsh profile、进程管理器/服务监督器状态、端口和插件数据在测试前后 digest/状态不变；
 - 两次连续运行产生相同归一化结论；
 - 故障注入、安全、清理和性能预算全部通过。
 

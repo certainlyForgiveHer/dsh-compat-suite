@@ -27,7 +27,7 @@ dsh Compatibility 插件是兼容性报告的 Web 可视化入口。它可以在
 ### 2.2 MVP 非目标
 
 - 不自动安装、升级、降级或移除插件。
-- 不修改 profile、lockfile、loader patch 或 PM2 配置。
+- 不修改 profile、lockfile、loader patch 或进程管理器/服务监督器配置。
 - 不在页面加载时自动访问 registry。
 - 不从插件进程内部重启正式 dsh。
 - 不把 dsh 内部的扫描结果当成启动前保证。
