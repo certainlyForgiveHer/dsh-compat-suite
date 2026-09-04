@@ -1,0 +1,40 @@
+name: Release preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Release stage to run
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - preflight
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: release candidate preflight
+    if: inputs.stage == 'preflight'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run repository and package checks
+        run: pnpm verify
+
+      # Registry package publishing, GitHub Release creation, provenance, SBOM
+      # attachment, and rollback are intentionally not enabled until R1 acceptance.

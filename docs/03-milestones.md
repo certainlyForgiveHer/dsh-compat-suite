@@ -541,9 +541,9 @@ CLI 与插件使用同一报告语义，在真实 dsh 版本矩阵中给出一�
 
 ### 交付物
 
-- `@dsh-compat/core@0.1.0`；
-- `@dsh-compat/doctor@0.1.0`；
-- `@dsh-compat/plugin@0.1.0`；
+- `@miguel_tu/core@0.1.0`；
+- `@miguel_tu/doctor@0.1.0`；
+- `@miguel_tu/plugin@0.1.0`；
 - 对应同一 release commit 的 annotated `v0.1.0` tag；
 - checksum、provenance 和 SBOM；
 - 安装、使用、升级前检查和卸载文档；

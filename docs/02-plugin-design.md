@@ -66,9 +66,9 @@ external process
 建议包名：
 
 ```text
-@dsh-compat/core
-@dsh-compat/doctor
-@dsh-compat/plugin
+@miguel_tu/core
+@miguel_tu/doctor
+@miguel_tu/plugin
 ```
 
 建议 loader ID：
@@ -97,7 +97,7 @@ dsh-compat
 
 ```json
 {
-  "name": "@dsh-compat/plugin",
+  "name": "@miguel_tu/plugin",
   "version": "0.1.0",
   "repository": {
     "type": "git",
@@ -307,7 +307,7 @@ profile 和路径由受信任的插件配置确定，不能由浏览器传任意
 
 ```yaml
 - id: dsh-compat
-  name: '@dsh-compat/plugin'
+  name: '@miguel_tu/plugin'
   config:
     profile: web
     scanOnFirstOpen: true

@@ -1,0 +1,31 @@
+name: Controlled smoke preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: repository preflight
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify repository boundary
+        run: pnpm verify:g0
+
+      # Real DSH smoke and process-supervisor integration begin at C4/L4.
+      # This G0 workflow deliberately performs no production or runtime action.

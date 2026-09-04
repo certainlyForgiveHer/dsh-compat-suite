@@ -23,7 +23,7 @@ Both surfaces share the same scanning core and versioned report contract. The CL
 
 ## Project status
 
-This repository currently contains the public design baseline and governance templates. Implementation packages and runtime fixtures are not included yet. Git is initialized, while the `G0` bootstrap and `G1` multi-agent readiness gates remain to be completed.
+The `G0` repository bootstrap is complete: the workspace, package skeleton, repository governance, and validation entry points are in place. `G1` multi-agent readiness and the implementation milestones remain to be completed.
 
 ## Documentation
 

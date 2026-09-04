@@ -1,0 +1,47 @@
+{
+  "name": "@miguel_tu/doctor",
+  "version": "0.0.0",
+  "description": "Out-of-process compatibility checks and isolated validation for dsh hosts and plugins.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/certainlyForgiveHer/dsh-compat-suite.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/certainlyForgiveHer/dsh-compat-suite/issues"
+  },
+  "homepage": "https://github.com/certainlyForgiveHer/dsh-compat-suite#readme",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "dsh-compat-doctor": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm run build && node --test test/smoke.test.mjs"
+  },
+  "dependencies": {
+    "@miguel_tu/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -550,7 +550,7 @@ packages/cli/src/
 
 建议采用 TypeScript ESM，运行时支持范围与 dsh 实际支持的 Node 版本对齐。依赖保持克制：成熟 semver 库、严格 YAML 解析器、JSON Schema 验证器和安全进程管理即可。
 
-`packages/core` 与 `packages/cli` 属于同一个产品 monorepo，不建立嵌套 Git 仓库。CLI 的 npm 包名为 `@dsh-compat/doctor`；workspace、依赖方向、lockstep 版本、fixture 来源和 release 工件规则见 [Git 仓库、版本与生态发布治理](05-repository-governance.md)。
+`packages/core` 与 `packages/cli` 属于同一个产品 monorepo，不建立嵌套 Git 仓库。CLI 的 npm 包名为 `@miguel_tu/doctor`；workspace、依赖方向、lockstep 版本、fixture 来源和 release 工件规则见 [Git 仓库、版本与生态发布治理](05-repository-governance.md)。
 
 ## 18. CLI 完成定义
 

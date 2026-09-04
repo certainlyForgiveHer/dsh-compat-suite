@@ -1,0 +1,53 @@
+{
+  "name": "@miguel_tu/core",
+  "version": "0.0.0",
+  "description": "Shared inventory, compatibility, reporting, and safety primitives for dsh-compat-suite.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/certainlyForgiveHer/dsh-compat-suite.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/certainlyForgiveHer/dsh-compat-suite/issues"
+  },
+  "homepage": "https://github.com/certainlyForgiveHer/dsh-compat-suite#readme",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm run build && node --test test/smoke.test.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

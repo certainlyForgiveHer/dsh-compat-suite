@@ -88,10 +88,10 @@ dsh-compat-suite/
 │   │   ├── package.json
 │   │   └── src/
 │   ├── cli/
-│   │   ├── package.json             # name: @dsh-compat/doctor
+│   │   ├── package.json             # name: @miguel_tu/doctor
 │   │   └── src/
 │   └── dsh-plugin/
-│       ├── package.json             # name: @dsh-compat/plugin
+│       ├── package.json             # name: @miguel_tu/plugin
 │       ├── cordis.patch.yml
 │       ├── screenshots.json         # 可选
 │       ├── assets/                  # 可选、经脱敏和压缩的公开展示截图
@@ -121,7 +121,7 @@ dsh-compat-suite/
 
 - G0 必须选定唯一 canonical GitHub URL；正式 checkout 的 `origin` 指向该仓库，个人 fork 使用 `origin`，并以 `upstream` 指向 canonical 仓库。
 - 默认分支统一为 `main`。CI、README、package repository 和 awesome-list URL 不得分别指向不同镜像。
-- `@dsh-compat/*` 是当前逻辑包名。G0 必须验证维护者确实拥有对应 npm scope 的发布权限；若没有，先选择可拥有的新 scope 并原子更新六份设计文档，不能抢注或发布到他人命名空间。
+- `@miguel_tu/*` 是当前个人 npm scope 下的逻辑包名。G0 必须记录 `npm whoami` 验证结果；任何 scope 变化都必须在首次发布前原子更新所有设计文档和 package metadata，不能抢注或发布到他人命名空间。
 - G0 必须由维护者明确选择开源许可证，并确保根 LICENSE、各 package metadata 和第三方 fixture 使用方式一致。未选择许可证不会被默认解释为 MIT、Apache-2.0 或其他许可证。
 - 产品仓库在 R2 前必须公开；如开发阶段保持私有，release/投稿文档必须记录公开时点和敏感历史审计。
 
@@ -131,9 +131,9 @@ dsh-compat-suite/
 
 | 目录 | npm 包 | 责任 | 允许依赖 |
 | --- | --- | --- | --- |
-| `packages/core` | `@dsh-compat/core` | inventory、规则、schema、脱敏、candidate 与隔离控制内核 | 受审计的通用库 |
-| `packages/cli` | `@dsh-compat/doctor` | 命令解析、终端输出、退出码、外部进程编排 | `core` |
-| `packages/dsh-plugin` | `@dsh-compat/plugin` | Host API、Web UI、报告读取和候选预览 | `core` 的显式入口 |
+| `packages/core` | `@miguel_tu/core` | inventory、规则、schema、脱敏、candidate 与隔离控制内核 | 受审计的通用库 |
+| `packages/cli` | `@miguel_tu/doctor` | 命令解析、终端输出、退出码、外部进程编排 | `core` |
+| `packages/dsh-plugin` | `@miguel_tu/plugin` | Host API、Web UI、报告读取和候选预览 | `core` 的显式入口 |
 
 依赖必须是有向无环图：
 
@@ -149,9 +149,9 @@ doctor ───────X dsh-plugin
 
 `core` 必须通过 package exports 暴露不同运行时入口，例如：
 
-- `@dsh-compat/core/node`：文件发现、tar、子进程和 smoke；
-- `@dsh-compat/core/browser`：状态类型、纯函数和安全展示模型；
-- `@dsh-compat/core/schema`：报告 schema、版本和 validator。
+- `@miguel_tu/core/node`：文件发现、tar、子进程和 smoke；
+- `@miguel_tu/core/browser`：状态类型、纯函数和安全展示模型；
+- `@miguel_tu/core/schema`：报告 schema、版本和 validator。
 
 浏览器 bundle 不得通过深层 import 绕过 exports，也不得包含 `child_process`、文件系统扫描、registry credentials 或 smoke 代码。CI 必须对构建后的 import graph 做检查。
 
@@ -358,7 +358,7 @@ CI 应运行 secret scanner，并扫描 tracked files 中的本机用户名、�
 
 ```json
 {
-  "name": "@dsh-compat/plugin",
+  "name": "@miguel_tu/plugin",
   "version": "0.1.0",
   "repository": {
     "type": "git",
@@ -385,6 +385,17 @@ CI 应运行 secret scanner，并扫描 tracked files 中的本机用户名、�
 占位符 manifest 不得进入 release；CI 必须拒绝 `<owner>`、`<tested-...>` 等未替换占位符。
 
 ## 11. Release 流程
+
+### 11.0 Release 工件命名
+
+所有可下载工件都必须能从名称反查产品版本、提交和工件类型，不使用会随时间漂移的 `latest` 或无版本临时名称：
+
+- npm tarball：`dsh-compat-<package-slug>-v<version>-<commit-sha12>.tgz`；
+- checksum：`dsh-compat-v<version>-<commit-sha12>-SHA256SUMS`；
+- SBOM：`dsh-compat-v<version>-<commit-sha12>-sbom.cdx.json`；
+- 验收证据包：`dsh-compat-v<version>-<commit-sha12>-evidence.tar.gz`。
+
+工件内容、名称和摘要必须在同一个 release commit 生成并互相记录；实际发布时如果 npm 或 GitHub 自动生成的文件名不同，必须在 release manifest 中保存两者的映射，不能静默改名。
 
 ### 11.1 Release candidate
 

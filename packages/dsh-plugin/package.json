@@ -1,0 +1,45 @@
+{
+  "name": "@miguel_tu/plugin",
+  "version": "0.0.0",
+  "description": "Read-only dsh Host surface for inspecting compatibility reports.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/certainlyForgiveHer/dsh-compat-suite.git",
+    "directory": "packages/dsh-plugin"
+  },
+  "bugs": {
+    "url": "https://github.com/certainlyForgiveHer/dsh-compat-suite/issues"
+  },
+  "homepage": "https://github.com/certainlyForgiveHer/dsh-compat-suite#readme",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "dist",
+    "cordis.patch.yml"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm run build && node --test test/smoke.test.mjs"
+  },
+  "dependencies": {
+    "@miguel_tu/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
