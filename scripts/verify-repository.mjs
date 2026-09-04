@@ -123,8 +123,10 @@ const nestedGit = await walk('.', (filePath) => filePath.endsWith('/.git') || fi
 if (nestedGit.some((filePath) => filePath !== '.git')) fail(`nested Git metadata found: ${nestedGit.join(', ')}`);
 
 const remote = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8' });
-if (remote.status !== 0 || remote.stdout.trim() !== expectedRemote) {
-  fail(`origin must be ${expectedRemote}, got ${remote.stdout.trim() || remote.stderr.trim() || 'unavailable'}`);
+const actualRemote = remote.stdout.trim();
+const normalizeRemote = (value) => value.replace(/\.git$/, '');
+if (remote.status !== 0 || normalizeRemote(actualRemote) !== normalizeRemote(expectedRemote)) {
+  fail(`origin must be ${expectedRemote}, got ${actualRemote || remote.stderr.trim() || 'unavailable'}`);
 }
 
 const changesetConfig = await readJson('.changeset/config.json');
