@@ -1,6 +1,6 @@
 # G0 Bootstrap Acceptance Record
 
-状态：技术 bootstrap 验收通过；GitHub required-check/branch-protection 快照以远端设置记录为准。
+状态：G0 验收通过；GitHub required-check/branch-protection 快照已记录。
 
 验证日期：2026-09-04
 
@@ -27,6 +27,14 @@
 | YAML syntax | Ruby YAML parser over `.github/**/*.yml` | pass |
 | JSON syntax | Node JSON parser over manifests, schema and fixture lock | pass |
 | Diff whitespace | `git diff --check` | pass |
+
+## GitHub remote verification
+
+- PR quality run [#2](https://github.com/certainlyForgiveHer/dsh-compat-suite/actions/runs/33857087636) for commit `0a76b2a` passed on Node 22, 24 and 26.
+- The `main` classic branch protection rule requires a pull request before merging.
+- Required status checks are `quality / node-22.x`, `quality / node-24.x`, and `quality / node-26.x`.
+- Conversation resolution and linear history are required; force pushes and branch deletion are disabled.
+- Administrators cannot bypass the configured protections. Review approval is not required while this remains a single-maintainer repository; the CI gate and maintainer review remain mandatory.
 
 ## Implemented G0 surface
 
