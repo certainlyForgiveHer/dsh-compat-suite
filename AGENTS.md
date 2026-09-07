@@ -3,6 +3,8 @@
 状态：设计基线 v1
 适用范围：本文件所在目录及全部子目录
 
+当前执行模式：维护者于 2026-09-07 决定因预算限制跳过当前 G1 多 Agent 演练，允许按单 Agent 模式进入 M0。G1 仍未验证，不得记录为演练通过。见[单 Agent 阶段入口决策](docs/decisions/single-agent-m0.md)。当前每次只允许一个实现 Agent；未经维护者另行要求，不启动演练、并行实现或委派。原有认领记录、独立分支/worktree、PR、CI 和产品安全门槛继续适用。
+
 任何人类或自动化 Agent 在读取、规划、修改、验证或评审本仓库前，都必须先阅读本文件。本文只定义协作入口；完整协议见
 [`docs/06-multi-agent-collaboration.md`](docs/06-multi-agent-collaboration.md)。
 
