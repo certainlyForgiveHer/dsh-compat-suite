@@ -1,0 +1,12 @@
+{
+  "synthetic": true,
+  "initial_state": "ready",
+  "label": "done",
+  "events": [
+    { "id": "request", "event": "CLAIM_REQUESTED", "agent_id": "agent-a", "issue": 3, "scope_revision": 1, "base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "proposed_branch": "feat/3-example", "write_scope": ["tests/"], "shared_interfaces": [] },
+    { "id": "confirm", "event": "CLAIM_CONFIRMED", "agent_id": "agent-a", "coordinator_id": "coordinator", "issue": 3, "scope_revision": 1, "base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "branch": "feat/3-example", "claim_id": "claim-a", "write_scope": ["tests/"], "shared_interfaces": [], "expected_update_at": "2026-09-07T05:48:38Z", "required_reviews": ["specification"], "confirmation_url": "https://github.com/example/synthetic/issues/3#issuecomment-1" },
+    { "id": "start", "event": "WORK_STARTED", "agent_id": "agent-a", "claim_id": "claim-a", "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "branch": "feat/3-example", "worktree": "synthetic-a", "worktree_state": "clean" },
+    { "id": "review", "event": "PR_READY", "agent_id": "agent-a", "claim_id": "claim-a", "pr": { "issue": 3, "claim_id": "claim-a", "agent_id": "agent-a", "scope_revision": 1, "confirmation_url": "https://github.com/example/synthetic/issues/3#issuecomment-1", "write_scope": ["tests/"], "changed_paths": ["tests/example.mjs"], "verification": ["synthetic test passed"], "reviews": [{ "kind": "specification", "reviewer": "reviewer-b", "approved": true }] } },
+    { "id": "complete", "event": "WORK_COMPLETED", "agent_id": "agent-a", "claim_id": "claim-a", "coordinator_id": "coordinator", "merged_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "acceptance": ["fixture accepted"] }
+  ]
+}
