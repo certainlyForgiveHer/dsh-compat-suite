@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "run": {
+    "id": "11111111-2222-4333-8444-888888888888",
+    "startedAt": "2026-09-07T00:03:00Z",
+    "mode": "scan",
+    "doctorVersion": "0.1.0"
+  },
+  "host": {
+    "binaryInput": "<dsh-home>/bin/dsh",
+    "binaryRealpath": "<dsh-home>/bin/dsh",
+    "cliVersion": "0.1.1-rc.2",
+    "nodeVersion": "26.5.0",
+    "corePackages": [
+      {
+        "name": "@deepseek-ai/dsh-web",
+        "version": "0.1.1-rc.2"
+      }
+    ]
+  },
+  "profile": {
+    "name": "web",
+    "manifestDigest": "sha256:a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4",
+    "lockDigest": "sha256:e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8"
+  },
+  "plugins": [
+    {
+      "name": "@nanmicoder/dsh-agent-teams",
+      "loaderIds": ["dsh-agent-teams"],
+      "enabled": true,
+      "manifestSpecifier": "0.1.15",
+      "lockVersion": "0.1.15",
+      "actualVersion": "0.1.15",
+      "integrity": "sha512-U3ludGhldGljSW50ZWdyaXR5Rm9yR29sZGVuRml4dHVyZU9ubHk0PT0=",
+      "status": "incompatible",
+      "evidenceIds": [
+        "@nanmicoder/dsh-agent-teams:missing-host-api#1",
+        "@nanmicoder/dsh-agent-teams:engine-declaration-missing#1"
+      ],
+      "smokeCoverage": {
+        "result": "not-run",
+        "scope": [],
+        "notCovered": ["隔离启动验证（scan 模式不执行）"],
+        "evidenceIds": []
+      },
+      "uncheckedFeatures": ["subagents 命名空间其余方法引用"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "@nanmicoder/dsh-agent-teams:missing-host-api",
+      "code": "missing-host-api",
+      "subject": "@nanmicoder/dsh-agent-teams",
+      "status": "incompatible",
+      "severity": "block",
+      "confidence": "high",
+      "observed": "ctx.subagents.registerContinuableSetup 不存在于宿主 0.1.1-rc.2 的 API 导出表",
+      "expected": "宿主提供 subagents.registerContinuableSetup",
+      "evidence": [
+        {
+          "id": "@nanmicoder/dsh-agent-teams:missing-host-api#1",
+          "type": "host_api",
+          "source": "宿主 API 索引（@deepseek-ai/dsh-* 运行时代码与类型声明）",
+          "detail": "subagents 命名空间无该方法"
+        }
+      ],
+      "location": "<profile>/node_modules/@nanmicoder/dsh-agent-teams/dist/index.js",
+      "nextStep": "评估固定历史版本并运行隔离 smoke",
+      "blocking": true
+    },
+    {
+      "id": "@nanmicoder/dsh-agent-teams:engine-declaration-missing",
+      "code": "engine-declaration-missing",
+      "subject": "@nanmicoder/dsh-agent-teams",
+      "status": "unknown",
+      "severity": "review",
+      "confidence": "medium",
+      "observed": "未声明 dsh.engines，且无已知矩阵记录",
+      "expected": "明确的引擎声明、矩阵记录或 smoke 结果",
+      "evidence": [
+        {
+          "id": "@nanmicoder/dsh-agent-teams:engine-declaration-missing#1",
+          "type": "manifest",
+          "source": "<profile>/node_modules/@nanmicoder/dsh-agent-teams/package.json",
+          "detail": "无 dsh.engines 字段"
+        }
+      ],
+      "location": "<profile>/node_modules/@nanmicoder/dsh-agent-teams/package.json",
+      "nextStep": "补充声明或执行 smoke 后复扫",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "status": "incompatible",
+    "blocking": 1,
+    "review": 1
+  }
+}

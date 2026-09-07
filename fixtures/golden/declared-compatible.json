@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "run": {
+    "id": "11111111-2222-4333-8444-666666666666",
+    "startedAt": "2026-09-07T00:01:00Z",
+    "mode": "scan",
+    "doctorVersion": "0.1.0"
+  },
+  "host": {
+    "binaryInput": "<dsh-home>/bin/dsh",
+    "binaryRealpath": "<dsh-home>/bin/dsh",
+    "cliVersion": "0.1.1-rc.2",
+    "nodeVersion": "26.5.0",
+    "corePackages": [
+      {
+        "name": "@deepseek-ai/dsh-web",
+        "version": "0.1.1-rc.2"
+      }
+    ]
+  },
+  "profile": {
+    "name": "web",
+    "manifestDigest": "sha256:a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4",
+    "lockDigest": "sha256:e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8"
+  },
+  "plugins": [
+    {
+      "name": "@miguel_tu/example-board",
+      "loaderIds": ["example-board"],
+      "enabled": true,
+      "manifestSpecifier": "0.2.9",
+      "lockVersion": "0.2.9",
+      "actualVersion": "0.2.9",
+      "integrity": "sha512-U3ludGhldGljSW50ZWdyaXR5Rm9yR29sZGVuRml4dHVyZU9ubHkyPT0=",
+      "status": "declared_compatible",
+      "evidenceIds": [
+        "@miguel_tu/example-board:engine-range-match#1"
+      ],
+      "smokeCoverage": {
+        "result": "not-run",
+        "scope": [],
+        "notCovered": ["隔离启动验证（本次 scan 未执行）"],
+        "evidenceIds": []
+      },
+      "uncheckedFeatures": ["插件业务功能（无 smoke 覆盖）"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "@miguel_tu/example-board:engine-range-match",
+      "code": "engine-range-match",
+      "subject": "@miguel_tu/example-board",
+      "status": "declared_compatible",
+      "severity": "info",
+      "confidence": "high",
+      "observed": "dsh.engines.dsh 声明 >=0.1.1-rc.2，覆盖宿主 0.1.1-rc.2",
+      "expected": "引擎声明覆盖当前宿主版本",
+      "evidence": [
+        {
+          "id": "@miguel_tu/example-board:engine-range-match#1",
+          "type": "manifest",
+          "source": "<profile>/package.json → @miguel_tu/example-board dsh.engines",
+          "detail": "仅有 semver 范围匹配，最高为 declared_compatible"
+        }
+      ],
+      "location": "<profile>/package.json",
+      "nextStep": "需要更高置信时执行隔离 smoke",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "status": "declared_compatible",
+    "blocking": 0,
+    "review": 0
+  }
+}

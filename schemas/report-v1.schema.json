@@ -1,0 +1,396 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/certainlyForgiveHer/dsh-compat-suite/blob/main/schemas/report-v1.schema.json",
+  "title": "dsh Compatibility Suite report v1",
+  "description": "Frozen v1 report contract shared by dsh-compat-doctor CLI and the dsh compatibility plugin. Semantics, exit codes, finding-code registry, redaction rules, and aggregation order are normative in docs/07-m0-contract.md.",
+  "type": "object",
+  "definitions": {
+    "evidenceLevel": {
+      "enum": ["runtime", "host_api", "manifest", "known_matrix", "lock", "heuristic"]
+    },
+    "packageName": {
+      "type": "string",
+      "pattern": "^(@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$"
+    },
+    "exactVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "sha256Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sha512Integrity": {
+      "type": ["string", "null"],
+      "pattern": "^sha512-[A-Za-z0-9+/=]+$"
+    },
+    "findingId": {
+      "type": "string",
+      "pattern": "^(host|(@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*):[a-z][a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "evidenceId": {
+      "type": "string",
+      "pattern": "^(host|(@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*):[a-z][a-z0-9]+(-[a-z0-9]+)*#[0-9]+$"
+    },
+    "findingCode": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "redactedText": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": ["schemaVersion", "run", "host", "profile", "plugins", "findings", "summary"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "run": {
+      "type": "object",
+      "required": ["id", "startedAt", "mode", "doctorVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "startedAt": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
+        },
+        "mode": {
+          "enum": ["scan", "check-update", "smoke"]
+        },
+        "doctorVersion": {
+          "$ref": "#/definitions/exactVersion"
+        }
+      }
+    },
+    "host": {
+      "type": "object",
+      "required": ["binaryInput", "binaryRealpath", "cliVersion", "nodeVersion", "corePackages"],
+      "additionalProperties": false,
+      "properties": {
+        "binaryInput": {
+          "$ref": "#/definitions/redactedText"
+        },
+        "binaryRealpath": {
+          "$ref": "#/definitions/redactedText"
+        },
+        "cliVersion": {
+          "$ref": "#/definitions/exactVersion"
+        },
+        "nodeVersion": {
+          "$ref": "#/definitions/exactVersion"
+        },
+        "corePackages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "version"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "$ref": "#/definitions/packageName"
+              },
+              "version": {
+                "description": "Actual resolved version of the core package.",
+                "$ref": "#/definitions/exactVersion"
+              },
+              "expectedVersion": {
+                "description": "Version implied by the host CLI identity; presence with a differing version expresses host version skew.",
+                "$ref": "#/definitions/exactVersion"
+              }
+            }
+          }
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "required": ["name", "manifestDigest", "lockDigest"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "manifestDigest": {
+          "$ref": "#/definitions/sha256Digest"
+        },
+        "lockDigest": {
+          "$ref": "#/definitions/sha256Digest"
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "loaderIds",
+          "enabled",
+          "manifestSpecifier",
+          "lockVersion",
+          "actualVersion",
+          "integrity",
+          "status",
+          "evidenceIds",
+          "smokeCoverage",
+          "uncheckedFeatures"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "$ref": "#/definitions/packageName"
+          },
+          "loaderIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "manifestSpecifier": {
+            "description": "Profile manifest dependency specifier; null when not declared.",
+            "type": ["string", "null"]
+          },
+          "lockVersion": {
+            "description": "Version resolved by the lockfile; null when absent from the lock.",
+            "$ref": "#/definitions/exactVersion"
+          },
+          "actualVersion": {
+            "description": "Version found in node_modules; null when the package directory is missing. Together with manifestSpecifier and lockVersion this expresses the manifest/lock/actual three-way identity.",
+            "$ref": "#/definitions/exactVersion"
+          },
+          "integrity": {
+            "$ref": "#/definitions/sha512Integrity"
+          },
+          "status": {
+            "enum": [
+              "validated_compatible",
+              "declared_compatible",
+              "degraded",
+              "incompatible",
+              "unknown",
+              "scan_error"
+            ]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/evidenceId"
+            }
+          },
+          "smokeCoverage": {
+            "type": "object",
+            "required": ["result", "scope", "notCovered", "evidenceIds"],
+            "additionalProperties": false,
+            "properties": {
+              "result": {
+                "enum": ["passed", "failed", "not-run", "unavailable", "indeterminate"]
+              },
+              "scope": {
+                "description": "Isolated startup validation stages actually exercised.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "notCovered": {
+                "description": "What the smoke explicitly did not validate; startup validation never claims functional validation.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "evidenceIds": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/evidenceId"
+                }
+              }
+            },
+            "if": {
+              "properties": {
+                "result": {
+                  "const": "passed"
+                }
+              },
+              "required": ["result"]
+            },
+            "then": {
+              "required": ["notCovered", "evidenceIds"],
+              "properties": {
+                "notCovered": {
+                  "minItems": 1
+                },
+                "evidenceIds": {
+                  "minItems": 1
+                }
+              }
+            }
+          },
+          "uncheckedFeatures": {
+            "description": "Features static analysis could not check.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "if": {
+          "properties": {
+            "status": {
+              "const": "validated_compatible"
+            }
+          },
+          "required": ["status"]
+        },
+        "then": {
+          "required": ["smokeCoverage"],
+          "properties": {
+            "smokeCoverage": {
+              "required": ["result"],
+              "properties": {
+                "result": {
+                  "const": "passed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "subject",
+          "status",
+          "severity",
+          "confidence",
+          "observed",
+          "expected",
+          "evidence",
+          "nextStep",
+          "blocking"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Stable deterministic id: <subject>:<code>.",
+            "$ref": "#/definitions/findingId"
+          },
+          "code": {
+            "description": "Rule code from the registry in docs/07-m0-contract.md.",
+            "$ref": "#/definitions/findingCode"
+          },
+          "subject": {
+            "description": "Package name of the affected plugin, or the reserved subject 'host'.",
+            "$ref": "#/definitions/packageName"
+          },
+          "status": {
+            "description": "State this finding establishes for its subject before aggregation.",
+            "enum": [
+              "validated_compatible",
+              "declared_compatible",
+              "degraded",
+              "incompatible",
+              "unknown",
+              "scan_error"
+            ]
+          },
+          "severity": {
+            "enum": ["block", "review", "info"]
+          },
+          "confidence": {
+            "enum": ["high", "medium", "low"]
+          },
+          "observed": {
+            "$ref": "#/definitions/redactedText"
+          },
+          "expected": {
+            "$ref": "#/definitions/redactedText"
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "type", "source"],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "Stable evidence id: <findingId>#<ordinal>.",
+                  "$ref": "#/definitions/evidenceId"
+                },
+                "type": {
+                  "$ref": "#/definitions/evidenceLevel"
+                },
+                "source": {
+                  "description": "Redacted source location or record the evidence was read from.",
+                  "$ref": "#/definitions/redactedText"
+                },
+                "detail": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "location": {
+            "$ref": "#/definitions/redactedText"
+          },
+          "logSummary": {
+            "description": "Redacted, truncated log excerpt supporting the finding.",
+            "type": "string"
+          },
+          "nextStep": {
+            "$ref": "#/definitions/redactedText"
+          },
+          "blocking": {
+            "description": "Whether this finding blocks the current policy (advisory or strict).",
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["status", "blocking", "review"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "validated_compatible",
+            "declared_compatible",
+            "degraded",
+            "incompatible",
+            "unknown",
+            "scan_error"
+          ]
+        },
+        "blocking": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
