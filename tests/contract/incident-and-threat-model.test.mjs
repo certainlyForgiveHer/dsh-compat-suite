@@ -111,6 +111,9 @@ test('provenance is verifiable or explicitly limited: no guessed registry identi
   for (const incident of INCIDENT_FILES) {
     const fixture = await loadJson(incident.file);
     assert.ok(fixture);
+    if (fixture.host?.provenance?.lockId) {
+      referencedIds.add(fixture.host.provenance.lockId);
+    }
     const provenance = fixture.provenance;
     assert.ok(provenance, `${incident.id} must carry a provenance record`);
 

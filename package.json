@@ -12,8 +12,10 @@
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
+    "test:contract": "node --test tests/contract/*.test.mjs",
     "verify:g0": "node scripts/verify-repository.mjs",
-    "verify": "pnpm run verify:g0 && pnpm run build && pnpm run typecheck && pnpm run test",
+    "verify:m0": "node scripts/verify-m0.mjs",
+    "verify": "pnpm run verify:g0 && pnpm run verify:m0 && pnpm run test:contract && pnpm run build && pnpm run typecheck && pnpm run test",
     "changeset": "changeset",
     "version-packages": "changeset version"
   },

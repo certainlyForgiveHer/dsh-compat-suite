@@ -78,7 +78,7 @@ test('docs/07 records the zero-false-green principle: absence of errors can neve
   );
   assert.match(
     normalized,
-    /不存在错误.{0,40}不能产生validated_compatible/,
+    /不存在错误.{0,40}不能产生\s*validated_compatible/,
     'docs/07 must state that absence of errors cannot produce validated_compatible'
   );
 });
