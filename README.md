@@ -23,7 +23,7 @@ Both surfaces share the same scanning core and versioned report contract. The CL
 
 ## Project status
 
-The `G0` repository bootstrap is complete: the workspace, package skeleton, repository governance, and validation entry points are in place. `G1` multi-agent readiness and the implementation milestones remain to be completed.
+`G0` is complete. The current next stage is `M0` (contract and safety baseline), enabled in single-agent mode by the [maintainer decision](docs/decisions/single-agent-m0.md). G1 multi-agent rehearsal is deferred for budget reasons and remains unverified; M0 implementation is not yet complete.
 
 ## Documentation
 
