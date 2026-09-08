@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "run": {
+    "id": "11111111-2222-4333-8444-aaaaaaaaaaaa",
+    "startedAt": "2026-09-07T00:05:00Z",
+    "mode": "scan",
+    "doctorVersion": "0.1.0"
+  },
+  "host": {
+    "binaryInput": "<dsh-home>/bin/dsh",
+    "binaryRealpath": "<dsh-home>/bin/dsh",
+    "cliVersion": "0.1.1-rc.2",
+    "nodeVersion": "26.5.0",
+    "corePackages": []
+  },
+  "profile": {
+    "name": "web",
+    "manifestDigest": "sha256:a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4",
+    "lockDigest": "sha256:e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8"
+  },
+  "plugins": [],
+  "findings": [
+    {
+      "id": "host:scan-infrastructure-error",
+      "code": "scan-infrastructure-error",
+      "subject": "host",
+      "status": "scan_error",
+      "severity": "block",
+      "confidence": "high",
+      "observed": "<profile>/pnpm-lock.yaml 解析失败：YAML 语法错误（第 12 行）",
+      "expected": "可解析的 pnpm-lock v9 文件",
+      "evidence": [
+        {
+          "id": "host:scan-infrastructure-error#1",
+          "type": "lock",
+          "source": "<profile>/pnpm-lock.yaml",
+          "detail": "parser: line 12, column 3"
+        }
+      ],
+      "location": "<profile>/pnpm-lock.yaml",
+      "nextStep": "修复或重新生成 lockfile 后重新扫描",
+      "blocking": true
+    }
+  ],
+  "summary": {
+    "status": "scan_error",
+    "blocking": 1,
+    "review": 0
+  }
+}

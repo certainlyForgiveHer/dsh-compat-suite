@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "run": {
+    "id": "11111111-2222-4333-8444-999999999999",
+    "startedAt": "2026-09-07T00:04:00Z",
+    "mode": "scan",
+    "doctorVersion": "0.1.0"
+  },
+  "host": {
+    "binaryInput": "<dsh-home>/bin/dsh",
+    "binaryRealpath": "<dsh-home>/bin/dsh",
+    "cliVersion": "0.1.1-rc.2",
+    "nodeVersion": "26.5.0",
+    "corePackages": [
+      {
+        "name": "@deepseek-ai/dsh-web",
+        "version": "0.1.1-rc.2"
+      }
+    ]
+  },
+  "profile": {
+    "name": "web",
+    "manifestDigest": "sha256:a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4",
+    "lockDigest": "sha256:e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8"
+  },
+  "plugins": [
+    {
+      "name": "example-dynamic-tool",
+      "loaderIds": ["example-dynamic-tool"],
+      "enabled": true,
+      "manifestSpecifier": "1.0.0",
+      "lockVersion": "1.0.0",
+      "actualVersion": "1.0.0",
+      "integrity": "sha512-U3ludGhldGljSW50ZWdyaXR5Rm9yR29sZGVuRml4dHVyZU9ubHk1PT0=",
+      "status": "unknown",
+      "evidenceIds": [
+        "example-dynamic-tool:engine-declaration-missing#1"
+      ],
+      "smokeCoverage": {
+        "result": "not-run",
+        "scope": [],
+        "notCovered": ["隔离启动验证（本次 scan 未执行）"],
+        "evidenceIds": []
+      },
+      "uncheckedFeatures": ["动态属性访问形式的宿主 API 引用"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "example-dynamic-tool:engine-declaration-missing",
+      "code": "engine-declaration-missing",
+      "subject": "example-dynamic-tool",
+      "status": "unknown",
+      "severity": "review",
+      "confidence": "medium",
+      "observed": "未声明 dsh.engines 与 peerDependencies，且无已知矩阵记录",
+      "expected": "明确的引擎声明、矩阵记录或 smoke 结果",
+      "evidence": [
+        {
+          "id": "example-dynamic-tool:engine-declaration-missing#1",
+          "type": "manifest",
+          "source": "<profile>/package.json → example-dynamic-tool",
+          "detail": "无 dsh.engines 字段、无 peer 声明"
+        }
+      ],
+      "location": "<profile>/package.json",
+      "nextStep": "补充声明或执行 smoke 后复扫",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "status": "unknown",
+    "blocking": 0,
+    "review": 1
+  }
+}

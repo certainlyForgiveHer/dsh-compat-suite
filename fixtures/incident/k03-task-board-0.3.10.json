@@ -1,0 +1,58 @@
+{
+  "fixtureVersion": 1,
+  "id": "K03",
+  "matrixCase": "K03",
+  "incident": "dsh-0.1.1-rc.2-three-plugin",
+  "title": "task-board 0.3.10 的 engine 要求超过宿主基线",
+  "host": {
+    "cliVersion": "0.1.1-rc.2",
+    "provenance": {
+      "lockId": "dsh-0.1.1-rc.2"
+    }
+  },
+  "plugin": {
+    "name": "@linxin666/dsh-client-ui-task-board",
+    "version": "0.3.10",
+    "manifestSpecifier": "0.3.10",
+    "lockVersion": "0.3.10",
+    "actualVersion": "0.3.10",
+    "engines": {
+      "dsh": ">=0.1.2-alpha.1"
+    },
+    "peerDependencies": {
+      "react": "^18.2.0"
+    },
+    "clientInjects": [
+      "@deepseek-ai/dsh-client-connection",
+      "@deepseek-ai/dsh-client-ui-settings",
+      "@deepseek-ai/dsh-client-ui-renderer",
+      "@deepseek-ai/dsh-api-session-controller",
+      "@deepseek-ai/dsh-api-workspace-controller",
+      "@deepseek-ai/dsh-api-remotes"
+    ],
+    "apiUsage": ["session/list"],
+    "manifestNotes": "registry 元数据核实：dsh.engines.dsh 为 >=0.1.2-alpha.1，与 docs/04 K03 权威预期逐字一致；peer 仅 react ^18.2.0（非 dsh 宿主核心包，不参与本案判定，其 optional 性未记录，待 C1 复核）。三方 specifier/lock 逐项值未在权威文档记录，以文档固定的安装版本 0.3.10 填充三方，待 C1 从真实 profile 复核。"
+  },
+  "expected": {
+    "status": "incompatible",
+    "findings": [
+      {
+        "code": "plugin-engine-mismatch",
+        "status": "incompatible",
+        "evidenceTypes": ["manifest"]
+      }
+    ],
+    "smoke": {
+      "expectation": "must-not-pass",
+      "captures": ["session/list 持续错误识别"]
+    },
+    "rationale": "dsh.engines.dsh 要求 >=0.1.2-alpha.1，而宿主为 0.1.1-rc.2；按 prerelease 语义 0.1.1-rc.2 < 0.1.2-alpha.1，manifest 级引擎冲突成立，即 incompatible，禁止任何绿色结论。宿主未跨代、本案无缺失 API 证据，但引擎声明冲突已足以阻断；若强行启动，smoke 不得通过，且必须识别 session/list 持续错误为 degraded/incompatible。"
+  },
+  "provenance": {
+    "package": "@linxin666/dsh-client-ui-task-board",
+    "version": "0.3.10",
+    "status": "verified",
+    "lockId": "task-board-0.3.10",
+    "note": "docs/04 仅记录未加 scope 的 task-board 0.3.10；识别为 @linxin666/dsh-client-ui-task-board 的依据是 registry 存在精确版本 0.3.10，且其 dsh.engines.dsh >=0.1.2-alpha.1 与 K03 权威预期逐字一致。registry 身份（Apache-2.0、integrity、repository）已于 2026-09-07 只读核实，未下载 tarball。"
+  }
+}

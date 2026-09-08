@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "run": {
+    "id": "11111111-2222-4333-8444-555555555555",
+    "startedAt": "2026-09-07T00:00:00Z",
+    "mode": "smoke",
+    "doctorVersion": "0.1.0"
+  },
+  "host": {
+    "binaryInput": "<dsh-home>/bin/dsh",
+    "binaryRealpath": "<dsh-home>/bin/dsh",
+    "cliVersion": "0.1.1-rc.2",
+    "nodeVersion": "26.5.0",
+    "corePackages": [
+      {
+        "name": "@deepseek-ai/dsh-web",
+        "version": "0.1.1-rc.2",
+        "expectedVersion": "0.1.1-rc.2"
+      }
+    ]
+  },
+  "profile": {
+    "name": "web",
+    "manifestDigest": "sha256:a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4",
+    "lockDigest": "sha256:e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8"
+  },
+  "plugins": [
+    {
+      "name": "@miguel_tu/example-board",
+      "loaderIds": ["example-board"],
+      "enabled": true,
+      "manifestSpecifier": "0.2.9",
+      "lockVersion": "0.2.9",
+      "actualVersion": "0.2.9",
+      "integrity": "sha512-U3ludGhldGljSW50ZWdyaXR5Rm9yR29sZGVuRml4dHVyZU9ubHkxPT0=",
+      "status": "validated_compatible",
+      "evidenceIds": [
+        "@miguel_tu/example-board:engine-range-match#1",
+        "@miguel_tu/example-board:smoke-passed#1"
+      ],
+      "smokeCoverage": {
+        "result": "passed",
+        "scope": ["startup", "loader-apply", "http-probe", "stability-window"],
+        "notCovered": ["插件业务功能探针（未配置，不属于 smoke 范围）"],
+        "evidenceIds": ["@miguel_tu/example-board:smoke-passed#1"]
+      },
+      "uncheckedFeatures": ["动态属性访问形式的宿主 API 引用"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "@miguel_tu/example-board:engine-range-match",
+      "code": "engine-range-match",
+      "subject": "@miguel_tu/example-board",
+      "status": "declared_compatible",
+      "severity": "info",
+      "confidence": "high",
+      "observed": "dsh.engines.dsh 声明 >=0.1.1-rc.2，覆盖宿主 0.1.1-rc.2",
+      "expected": "引擎声明覆盖当前宿主版本",
+      "evidence": [
+        {
+          "id": "@miguel_tu/example-board:engine-range-match#1",
+          "type": "manifest",
+          "source": "<profile>/package.json → @miguel_tu/example-board dsh.engines",
+          "detail": "范围匹配仅证明声明一致，不证明功能兼容"
+        }
+      ],
+      "location": "<profile>/package.json",
+      "nextStep": "结合 smoke 结果判定是否可放行",
+      "blocking": false
+    },
+    {
+      "id": "@miguel_tu/example-board:smoke-passed",
+      "code": "smoke-passed",
+      "subject": "@miguel_tu/example-board",
+      "status": "validated_compatible",
+      "severity": "info",
+      "confidence": "high",
+      "observed": "隔离启动 3.2s 内 ready，HTTP 探针 200，15s 稳定窗口内 PID 与端口不变",
+      "expected": "超时内 ready、探针 2xx、稳定窗口内无 loader 错误与异常",
+      "evidence": [
+        {
+          "id": "@miguel_tu/example-board:smoke-passed#1",
+          "type": "runtime",
+          "source": "smoke 运行记录 <tmp>/smoke/<run>/",
+          "detail": "ready=3.2s；probe=200；stability=passed；shutdown<10s"
+        }
+      ],
+      "location": "<tmp>/smoke/<run>/",
+      "nextStep": "可放行；业务功能仍需人工验证",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "status": "validated_compatible",
+    "blocking": 0,
+    "review": 0
+  }
+}

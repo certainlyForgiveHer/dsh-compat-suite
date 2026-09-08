@@ -1,5 +1,67 @@
 {
   "$schema": "../schemas/fixture-source-lock.schema.json",
   "schemaVersion": 1,
-  "sources": []
+  "sources": [
+    {
+      "id": "dsh-0.1.1-rc.2",
+      "package": "@deepseek-ai/dsh",
+      "version": "0.1.1-rc.2",
+      "registry": "https://registry.npmjs.org/",
+      "integrity": "sha512-UP1UIh6q3Gme/yXRn/QL2P8IsVlv8Shpg22TRJIZPsCRWLm4CBiA1MUvXmJAfsOEETBMLAl+xWPtFw6ICsN3wg==",
+      "license": "MIT",
+      "sourceUrl": "https://github.com/deepseek-ai/deepseek-harness",
+      "useCases": [
+        "incident-host-baseline:K01",
+        "incident-host-baseline:K03",
+        "incident-host-baseline:K05",
+        "kmatrix-baseline:0.1.1-rc.2"
+      ],
+      "reviewedAt": "2026-09-07"
+    },
+    {
+      "id": "agent-teams-0.1.15",
+      "package": "@nanmicoder/dsh-agent-teams",
+      "version": "0.1.15",
+      "registry": "https://registry.npmjs.org/",
+      "integrity": "sha512-TfyzwBe4yToJmUGLvJq+iqgxv8HkWCOdmdPNAs0LwX5Do9RMHer1auPS29rorSqxwTF2jINcgokRq9CIa/q2Cg==",
+      "license": "MIT",
+      "sourceUrl": "https://github.com/NanmiCoder/dsh-agent-teams",
+      "useCases": [
+        "incident-fixture:K01",
+        "kmatrix:K01",
+        "api-surface-fixture:subagents.registerContinuableSetup"
+      ],
+      "reviewedAt": "2026-09-07"
+    },
+    {
+      "id": "task-board-0.3.10",
+      "package": "@linxin666/dsh-client-ui-task-board",
+      "version": "0.3.10",
+      "registry": "https://registry.npmjs.org/",
+      "integrity": "sha512-Bw+CxPOt3Cif6yFV98wD2zkJCur9iuIPMRHjHIwE/zGQU4XJUJTiOTmDMZRUtwQ+6+hqwFr3/jQdM/qTHMh7jA==",
+      "license": "Apache-2.0",
+      "sourceUrl": "https://github.com/zhu1090093659/dsh-web",
+      "useCases": [
+        "incident-fixture:K03",
+        "kmatrix:K03",
+        "engine-mismatch-fixture:>=0.1.2-alpha.1"
+      ],
+      "reviewedAt": "2026-09-07"
+    },
+    {
+      "id": "skill-explorer-0.3.10",
+      "package": "@linxin666/dsh-client-ui-skill-explorer",
+      "version": "0.3.10",
+      "registry": "https://registry.npmjs.org/",
+      "integrity": "sha512-e8cyXMvIOQtL5BzGdhtdwnLpiQQjE4W0i6boovD8E9V1VBcXL/qmgjpLR3YDzb+nhP7108zeT3ZKPBS69Dl0wQ==",
+      "license": "BSD-3-Clause",
+      "sourceUrl": "https://github.com/zhu1090093659/dsh-web",
+      "useCases": [
+        "incident-fixture:K05",
+        "kmatrix:K05",
+        "engine-mismatch-fixture:>=0.1.2-alpha.1"
+      ],
+      "reviewedAt": "2026-09-07"
+    }
+  ]
 }
