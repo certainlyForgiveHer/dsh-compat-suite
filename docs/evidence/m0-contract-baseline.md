@@ -12,6 +12,7 @@
 - 分支：`feat/10-m0-contract`（worktree `dsh-compat-suite-wt-10-dsh-glm-01`，产品根之外）
 - `base_sha`：`739d876d8e73ccc8eb796cf1a36b0c51d8ea84f6`
 - 实现提交：`7206914`（失败测试基线）→ `82068cd`（schema + fixtures）→ `5499282`（契约与威胁模型文档）→ `1031a0b`（验证门）
+- 评审修复 scope revision：2（维护者要求统一 `corePackages` 契约并修正验证入口；本次补充允许修改 `docs/01-cli-design.md`，其余范围不变）
 
 ## Delivered surface
 
@@ -30,6 +31,12 @@
 
 按 AGENTS.md 第 3 节第 8 步，先提交失败测试基线（`7206914`：`node --test tests/contract/` 因 schema、文档、fixtures、门禁不存在而失败），再实现工件使其转绿。最终 22 项契约测试全部通过，其中 8 项为阴性检查（零误报为绿的结构性证明）。
 
+## Review remediation (2026-09-08)
+
+- Maintainer review for PR #11 identified a documented shape drift: `docs/01-cli-design.md` showed `host.corePackages` as an object while the frozen report v1 schema and `docs/07-m0-contract.md` use an array so each package can carry version-skew evidence.
+- The report v1 array form is now reflected in `docs/01-cli-design.md`; the existing `docs/07` and schema definitions remain unchanged.
+- The `docs/07` verification entry now points to the runnable `pnpm run test:contract` script instead of the failing directory argument.
+
 ## Local verification
 
 基线（base_sha `739d876`，写入前）：`pnpm run verify` 全链绿色、工作树干净。
@@ -45,7 +52,7 @@
 | Package build/typecheck/test | `pnpm -r run build/typecheck/test` | pass；core/doctor/plugin 各 1 项 smoke 测试通过 |
 | Boundary | `git status --short`（验证后） | 空（clean） |
 | Whitespace | `git diff --check` | pass |
-| Scope | `git diff base_sha --stat` | 仅含确认 `write_scope` 路径；`packages/`、`pnpm-lock.yaml`、`docs/01-06`、`schemas/fixture-source-lock.schema.json`、`AGENTS.md`、`.github/` 未触碰 |
+| Scope | `git diff base_sha --stat` | 原确认 `write_scope` 路径，加上评审修复 scope revision 2 的 `docs/01-cli-design.md`；`packages/`、`pnpm-lock.yaml`、`schemas/fixture-source-lock.schema.json`、`AGENTS.md`、`.github/` 未触碰 |
 
 ## Negative checks (zero false green)
 

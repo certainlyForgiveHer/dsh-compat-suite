@@ -410,7 +410,7 @@ ctx.subagents.registerContinuableSetup(...)
     "binaryRealpath": "/real/path/to/dsh",
     "cliVersion": "0.1.1-rc.2",
     "nodeVersion": "26.5.0",
-    "corePackages": {}
+    "corePackages": []
   },
   "profile": {
     "name": "web",

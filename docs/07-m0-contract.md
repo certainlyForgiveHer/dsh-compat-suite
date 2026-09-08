@@ -1,6 +1,6 @@
 # M0 契约与安全基线（冻结 v1）
 
-状态：M0 冻结基线。本文与 [`schemas/report-v1.schema.json`](../schemas/report-v1.schema.json) 共同构成 report v1 契约；语义以本文为准，结构以 schema 为准。验证入口为 `pnpm run verify:m0` 与 `node --test tests/contract/`。
+状态：M0 冻结基线。本文与 [`schemas/report-v1.schema.json`](../schemas/report-v1.schema.json) 共同构成 report v1 契约；语义以本文为准，结构以 schema 为准。验证入口为 `pnpm run verify:m0` 与 `pnpm run test:contract`。
 
 本文的六状态词汇、finding code 命名空间和退出码映射必须与 [`01-cli-design.md`](01-cli-design.md) 第 4、6、8、12、13 节保持一致；发现不一致时上报偏差，不得在本文单方面重新定义。
 
