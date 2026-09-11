@@ -1,0 +1,10 @@
+{
+  "name": "dsh-profile-mixed",
+  "private": true,
+  "dependencies": {
+    "alpha-plugin": "1.0.0",
+    "beta-plugin": "2.1.0",
+    "delta-plugin": "4.0.0",
+    "epsilon-plugin": "5.0.0"
+  }
+}

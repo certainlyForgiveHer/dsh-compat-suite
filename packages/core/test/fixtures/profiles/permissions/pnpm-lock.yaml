@@ -1,0 +1,19 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+  .:
+    dependencies:
+      locked-plugin:
+        specifier: 1.0.0
+        version: 1.0.0
+
+packages:
+  locked-plugin@1.0.0:
+    resolution: {integrity: sha512-LLLLOCKED0000000000000000000000000000000000000000000000000000000==}
+
+snapshots:
+  locked-plugin@1.0.0: {}

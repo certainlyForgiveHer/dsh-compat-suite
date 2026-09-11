@@ -1,0 +1,9 @@
+lockfileVersion: '9.0'
+importers:
+  .:
+    dependencies:
+      broken-plugin:
+        specifier: 1.0.0
+      version: 1.0.0
+   packages:
+  this is not valid yaml: [unclosed
