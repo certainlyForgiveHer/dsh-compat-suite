@@ -112,6 +112,10 @@ dsh-compat-doctor scan --profile web --strict
 
 职责：发现当前宿主和 profile 的真实状态，执行离线静态规则，不访问 registry，不启动第二个 dsh。
 
+C1 实现状态（2026-09-11）：`scan` 的环境发现部分已实现——宿主身份解析、profile manifest、pnpm lock v9、node_modules 实际版本、三方 reconcile、路径脱敏与 `scan --json` 初版。离线静态规则判定属 C2，尚未实现，因此发现的插件状态恒为非绿色（`unknown`；有身份缺陷时为 `degraded` 或 `scan_error`）。证据见 [`evidence/c1-environment-discovery.md`](evidence/c1-environment-discovery.md)。
+
+`--profile` 接受 profile 名（解析为 `<dsh-home>/profiles/<name>`）或显式目录路径；`--dsh-bin` 未指定时从 `PATH` 解析 `dsh`。宿主不可解析时输出 `host-identity-unresolved`（scan_error，退出码 4），但**不丢失**插件身份。
+
 ### 5.2 候选版本预检
 
 ```text
