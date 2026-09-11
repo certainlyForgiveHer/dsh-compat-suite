@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 
 import { createPermissionDeniedProfile } from './helpers/permission-fixture.mjs';
 import { createRealLayoutProfile } from './helpers/real-layout-profile.mjs';
@@ -365,21 +365,43 @@ test('host resolution does not depend on a running dsh host', () => {
 test('scan --json runs without a live dsh process', (t) => {
   const fixture = createRealLayoutProfile();
   t.after(() => fixture.cleanup());
-  const out = execFileSync(
+
+  // Point at a binary that cannot exist, so the assertion does not depend on
+  // whether the machine running the tests happens to have dsh installed. The
+  // host being unresolvable must still yield a complete inventory: that is the
+  // point of running discovery out-of-process.
+  const run = spawnSync(
     process.execPath,
-    [new URL(CLI_DIST).pathname, 'scan', '--json', '--profile', fixture.profilePath],
+    [
+      new URL(CLI_DIST).pathname,
+      'scan',
+      '--json',
+      '--profile',
+      fixture.profilePath,
+      '--dsh-bin',
+      path.join(fixture.profilePath, 'no-such-dsh'),
+    ],
     {
       encoding: 'utf8',
       env: { ...process.env, DSH_COMPAT_FIXED_RUN: '1' },
     },
   );
+
+  // An unresolvable host is scan_error, so the documented exit code is 4.
+  assert.equal(run.status, 4, `expected scan_error exit code, stderr: ${run.stderr}`);
+  const out = run.stdout;
   const report = JSON.parse(out);
   assert.equal(report.schemaVersion, 1);
   assert.equal(report.run.mode, 'scan');
+  assert.equal(report.host.binaryInput, '<unresolved>');
   assert.equal(report.plugins.length, 1);
   assert.equal(report.plugins[0].name, 'cli-fixture-plugin');
-  // The real layout reached the end of the pipeline with no injected options.
+  // The real layout reached the end of the pipeline with no injected layout.
   assert.equal(report.plugins[0].lockVersion, '1.0.0');
   assert.equal(report.plugins[0].actualVersion, '1.0.0');
-  assert.ok(!out.includes('/Users/'), 'absolute user paths must be aliased');
+  assert.ok(
+    report.findings.some((finding) => finding.code === 'host-identity-unresolved'),
+    'an unresolvable host must be reported',
+  );
+  assert.ok(!/\/Users\/|\/home\//.test(out), 'absolute user paths must be aliased');
 });

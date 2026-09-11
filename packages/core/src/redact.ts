@@ -110,7 +110,7 @@ export function createRedactor(input: RedactorInput): Redactor {
 
   // Also alias any remaining absolute path under a home-like directory, so a
   // report never leaks a user directory tree even for paths outside the
-  // configured roots.
+  // configured roots. macOS uses /Users, Linux uses /home; CI runners use both.
   const homeLike = /\/(?:Users|home)\/[^/\s"']+/g;
 
   return (value: string): string => {
