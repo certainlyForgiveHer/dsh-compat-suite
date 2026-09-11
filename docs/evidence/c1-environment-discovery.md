@@ -46,6 +46,12 @@
 | Package tests | `pnpm -r run test` | pass；core 26/26、cli 1/1、plugin 1/1 |
 | Boundary | `git status --short` | 空（clean） |
 
+### CI
+
+PR #13 的 `PR quality` 工作流在 node 22.x / 24.x / 26.x 三个矩阵上全部通过（`pnpm install --frozen-lockfile` + `pnpm verify`）。
+
+首轮 CI 曾失败，原因是端到端 CLI 测试未指定 `--dsh-bin`，依赖运行机器恰好装有 `dsh`：CI runner 无 `dsh`，宿主解析正确产生 `host-identity-unresolved` 与退出码 4，而测试把它当作失败。修复方式是把 `--dsh-bin` 固定为不存在的路径，并断言"宿主不可解析时仍输出完整 inventory、退出码 4"——这正是验收条件所要求的 dsh 缺失场景，且不再依赖环境。该轮失败同时暴露了脱敏兜底只覆盖 `/Users` 而不含 Linux 的 `/home`，已一并修复并加入回归断言。
+
 ### Acceptance criteria 逐项
 
 | # | 验收条件 | 结果 | 证据 |
