@@ -6,15 +6,17 @@ import path from 'node:path';
  * Build the permission-denied profile fixture at runtime.
  *
  * It cannot be committed: git cannot index a file inside a directory it is
- * unable to traverse, so `chmod 000` on the directory makes the fixture
+ * unable to traverse, so `chmod 000` on a directory makes the fixture
  * untrackable. Creating it in a temp directory keeps the assertion real while
  * leaving the committed fixtures reproducible on a fresh clone.
  *
- * The read denial is placed on the plugin directory rather than the manifest
- * itself so that the directory entry still exists and can be enumerated.
+ * The permission denial is applied to a subdirectory holding the profile files,
+ * so the directory entry still exists and can be named, but reading through it
+ * raises EACCES. Denying a single file would also give EACCES, but with the
+ * denial on the directory the same fixture exercises every reader at once.
  *
- * Returns null when the platform or user cannot enforce the denial (root, or
- * a filesystem without POSIX permissions), so the caller can skip instead of
+ * Returns null when the platform or user cannot enforce the denial (root, or a
+ * filesystem without POSIX permissions), so the caller can skip instead of
  * reporting a false pass.
  */
 export function createPermissionDeniedProfile() {
@@ -23,11 +25,11 @@ export function createPermissionDeniedProfile() {
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-compat-perm-'));
   const profile = path.join(root, 'profile');
-  const pluginDir = path.join(profile, 'node_modules', 'locked-plugin');
-  fs.mkdirSync(pluginDir, { recursive: true });
+  const locked = path.join(profile, 'locked');
+  fs.mkdirSync(locked, { recursive: true });
 
   fs.writeFileSync(
-    path.join(profile, 'package.json'),
+    path.join(locked, 'package.json'),
     JSON.stringify(
       { name: 'dsh-profile-permissions', private: true, dependencies: { 'locked-plugin': '1.0.0' } },
       null,
@@ -36,7 +38,7 @@ export function createPermissionDeniedProfile() {
   );
 
   fs.writeFileSync(
-    path.join(profile, 'pnpm-lock.yaml'),
+    path.join(locked, 'pnpm-lock.yaml'),
     [
       "lockfileVersion: '9.0'",
       '',
@@ -61,31 +63,26 @@ export function createPermissionDeniedProfile() {
     ].join('\n'),
   );
 
-  fs.writeFileSync(
-    path.join(pluginDir, 'package.json'),
-    JSON.stringify({ name: 'locked-plugin', version: '1.0.0' }, null, 2) + '\n',
-  );
-
-  fs.chmodSync(pluginDir, 0o000);
+  fs.chmodSync(locked, 0o000);
 
   // Verify the denial actually holds before handing the fixture to a test.
   let denied = false;
   try {
-    fs.readFileSync(path.join(pluginDir, 'package.json'), 'utf8');
+    fs.readFileSync(path.join(locked, 'pnpm-lock.yaml'), 'utf8');
   } catch (error) {
     denied = error.code === 'EACCES' || error.code === 'EPERM';
   }
   if (!denied) {
-    fs.chmodSync(pluginDir, 0o755);
+    fs.chmodSync(locked, 0o755);
     fs.rmSync(root, { recursive: true, force: true });
     return null;
   }
 
   return {
-    profilePath: profile,
+    profilePath: locked,
     cleanup() {
       try {
-        fs.chmodSync(pluginDir, 0o755);
+        fs.chmodSync(locked, 0o755);
       } catch {
         /* already restored */
       }
