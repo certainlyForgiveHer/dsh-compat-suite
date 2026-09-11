@@ -1,0 +1,7 @@
+{
+  "name": "dsh-profile-broken",
+  "private": true,
+  "dependencies": {
+    "broken-plugin": "1.0.0"
+  }
+}

@@ -39,6 +39,7 @@
     "@miguel_tu/core": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "22.20.2",
     "typescript": "5.9.2"
   },
   "publishConfig": {
