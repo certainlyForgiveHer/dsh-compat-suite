@@ -12,6 +12,7 @@
  */
 
 import { existsSync } from 'node:fs';
+import path from 'node:path';
 
 import { PACKAGE_NAME as CORE_PACKAGE_NAME, runScan } from '@miguel_tu/core';
 
@@ -25,6 +26,7 @@ const EXIT_INTERNAL_ERROR = 70;
 interface ScanCliOptions {
   readonly profile: string;
   readonly binary: string;
+  readonly dshHome: string | undefined;
   readonly json: boolean;
   readonly strict: boolean;
   readonly exposePaths: boolean;
@@ -33,20 +35,25 @@ interface ScanCliOptions {
 const USAGE = `dsh-compat-doctor ${PACKAGE_VERSION}
 
 Usage:
-  dsh-compat-doctor scan [--profile <path>] [--json] [--strict] [--dsh <binary>] [--expose-paths]
+  dsh-compat-doctor scan [--profile <name|path>] [--json] [--strict] [--dsh-bin <path>] [--dsh-home <path>]
 
 Options:
-  --profile <path>   Profile directory to scan. Defaults to $DSH_HOME/profiles/web.
-  --dsh <binary>     dsh executable to resolve. Defaults to "dsh" on PATH.
-  --json             Emit the report v1 document on stdout.
-  --strict           Use strict exit codes (degraded and unknown become 2).
-  --expose-paths     Do not alias absolute user paths (unsafe; for local debugging).
-  -h, --help         Show this help.
+  --profile <name|path>  Profile name under <dsh-home>/profiles, or a profile
+                         directory path. Defaults to the "web" profile.
+  --dsh-bin <path>       dsh executable to resolve. Defaults to "dsh" on PATH.
+  --dsh-home <path>      dsh home directory. Defaults to $DSH_HOME or ~/.dsh.
+  --json                 Emit the report v1 document on stdout.
+  --strict               Use strict exit codes (degraded and unknown become 2).
+  --expose-paths         Do not alias absolute user paths (unsafe; local debugging only).
+  -h, --help             Show this help.
 `;
+
+const SAFE_PROFILE_NAME = /^[a-z0-9][a-z0-9-]*$/;
 
 function parseScanArgs(argv: readonly string[]): ScanCliOptions | { readonly error: string } {
   let profile: string | undefined;
   let binary = 'dsh';
+  let dshHome = process.env.DSH_HOME;
   let json = false;
   let strict = false;
   let exposePaths = false;
@@ -55,11 +62,13 @@ function parseScanArgs(argv: readonly string[]): ScanCliOptions | { readonly err
     const arg = argv[index];
     switch (arg) {
       case '--profile':
-      case '--dsh': {
+      case '--dsh-bin':
+      case '--dsh-home': {
         const value = argv[index + 1];
         if (value === undefined || value.startsWith('--')) return { error: `${arg} requires a value` };
         if (arg === '--profile') profile = value;
-        else binary = value;
+        else if (arg === '--dsh-bin') binary = value;
+        else dshHome = value;
         index += 1;
         break;
       }
@@ -77,13 +86,26 @@ function parseScanArgs(argv: readonly string[]): ScanCliOptions | { readonly err
     }
   }
 
-  const dshHome = process.env.DSH_HOME;
-  const resolvedProfile = profile ?? (dshHome === undefined ? undefined : `${dshHome}/profiles/web`);
+  // Accept either a directory path or a bare profile name resolved under the
+  // dsh home, matching the documented `--profile web` form.
+  let resolvedProfile = profile;
+  if (resolvedProfile !== undefined && !resolvedProfile.includes('/') && !resolvedProfile.includes(path.sep)) {
+    if (!SAFE_PROFILE_NAME.test(resolvedProfile)) {
+      return { error: `profile name must match ${SAFE_PROFILE_NAME.source}` };
+    }
+    if (dshHome === undefined) {
+      return { error: 'profile name given but --dsh-home is not set and DSH_HOME is empty' };
+    }
+    resolvedProfile = path.join(dshHome, 'profiles', resolvedProfile);
+  }
   if (resolvedProfile === undefined) {
-    return { error: 'no profile given and DSH_HOME is not set; pass --profile <path>' };
+    if (dshHome === undefined) {
+      return { error: 'no profile given and no dsh home known; pass --profile or --dsh-home' };
+    }
+    resolvedProfile = path.join(dshHome, 'profiles', 'web');
   }
 
-  return { profile: resolvedProfile, binary, json, strict, exposePaths };
+  return { profile: resolvedProfile, binary, dshHome, json, strict, exposePaths };
 }
 
 function renderSummary(jsonOutput: string, asJson: boolean): void {
@@ -134,7 +156,7 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
       host: { binary: parsed.binary },
       policy: parsed.strict ? 'strict' : 'advisory',
       exposePaths: parsed.exposePaths,
-      ...(process.env.DSH_HOME === undefined ? {} : { dshHome: process.env.DSH_HOME }),
+      ...(parsed.dshHome === undefined ? {} : { dshHome: parsed.dshHome }),
     });
     renderSummary(result.json, parsed.json);
     return result.exitCode;
