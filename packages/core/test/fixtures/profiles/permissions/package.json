@@ -1,7 +1,0 @@
-{
-  "name": "dsh-profile-permissions",
-  "private": true,
-  "dependencies": {
-    "locked-plugin": "1.0.0"
-  }
-}

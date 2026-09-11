@@ -1,10 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
+import { createPermissionDeniedProfile } from './helpers/permission-fixture.mjs';
+
 const CORE_DIST = new URL('../dist/index.js', import.meta.url).href;
+const CLI_DIST = new URL('../../cli/dist/index.js', import.meta.url).href;
 const FIXTURES = path.join(import.meta.dirname, 'fixtures', 'profiles');
+const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
+
+/**
+ * Validate a report against the frozen v1 schema using the repository's own
+ * M0 validator, so this suite cannot drift from the frozen contract.
+ */
+async function assertSchemaValid(report, label) {
+  const { validateAgainstSchema } = await import(
+    new URL('../../../scripts/verify-m0.mjs', import.meta.url).href
+  );
+  const schema = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'schemas', 'report-v1.schema.json'), 'utf8'));
+  const result = validateAgainstSchema(report, schema);
+  assert.equal(result.valid, true, `${label} must satisfy report schema v1: ${JSON.stringify(result.errors)}`);
+}
 
 const {
   parseProfileManifest,
@@ -76,8 +94,10 @@ test('parsePnpmLock surfaces a corrupted lockfile as a scan error, not a crash',
 });
 
 test('parsePnpmLock surfaces an unreadable file as a permission scan error', (t) => {
-  if (process.getuid?.() === 0) return t.skip('running as root; chmod 000 is not enforced');
-  const lock = parsePnpmLock(profilePath('permissions'));
+  const fixture = createPermissionDeniedProfile();
+  if (fixture === null) return t.skip('cannot enforce a POSIX permission denial on this platform/user');
+  t.after(() => fixture.cleanup());
+  const lock = parsePnpmLock(fixture.profilePath);
   assert.ok(lock.error, 'permission failure must produce an error record');
   assert.equal(lock.error.code, 'scan-infrastructure-error');
 });
@@ -219,15 +239,16 @@ test('scanProfile never yields a green status from absence of findings', () => {
   assert.equal(scan.summary.status, 'unknown');
 });
 
-test('scanProfile produces a schema-valid report for every non-missing fixture', () => {
+test('scanProfile produces a schema-valid report for every non-missing fixture', async () => {
   const fixtures = [
     ['consistent', 'unknown'],
     ['mixed', 'degraded'],
     ['broken', 'scan_error'],
   ];
   for (const [name, expectedStatus] of fixtures) {
+    const scan = scanProfile(profilePath(name));
     const report = buildReport({
-      scan: scanProfile(profilePath(name)),
+      scan,
       host: resolveHost({ binary: '/nonexistent/dsh' }),
       run: {
         id: '00000000-0000-4000-8000-000000000000',
@@ -238,7 +259,8 @@ test('scanProfile produces a schema-valid report for every non-missing fixture',
     });
     assert.equal(report.schemaVersion, 1);
     assert.equal(report.summary.status, expectedStatus, `${name} summary status`);
-    assert.equal(report.plugins.length, scanProfile(profilePath(name)).plugins.length);
+    assert.equal(report.plugins.length, scan.plugins.length);
+    await assertSchemaValid(report, `${name} report`);
   }
 });
 
@@ -264,11 +286,15 @@ test('host resolution does not depend on a running dsh host', () => {
 });
 
 test('scan --json runs without a live dsh process', () => {
-  const cli = new URL('../../cli/test/../../cli/dist/index.js', import.meta.url);
-  const out = execFileSync(process.execPath, [cli.pathname, 'scan', '--json', '--profile', profilePath('consistent')], {
-    encoding: 'utf8',
-    env: { ...process.env, DSH_COMPAT_FIXED_RUN: '1' },
-  });
+  const cli = new URL(CLI_DIST);
+  const out = execFileSync(
+    process.execPath,
+    [cli.pathname, 'scan', '--json', '--profile', profilePath('consistent')],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, DSH_COMPAT_FIXED_RUN: '1' },
+    },
+  );
   const report = JSON.parse(out);
   assert.equal(report.schemaVersion, 1);
   assert.equal(report.run.mode, 'scan');
