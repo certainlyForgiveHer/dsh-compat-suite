@@ -23,7 +23,7 @@ Both surfaces share the same scanning core and versioned report contract. The CL
 
 ## Project status
 
-`G0` is complete. The current next stage is `M0` (contract and safety baseline), enabled in single-agent mode by the [maintainer decision](docs/decisions/single-agent-m0.md). G1 multi-agent rehearsal is deferred for budget reasons and remains unverified; M0 implementation is not yet complete.
+`G0` and `M0` (contract and safety baseline) are complete. `C1` (environment discovery and the `scan` command) is implemented in [#13](https://github.com/certainlyForgiveHer/dsh-compat-suite/pull/13) and under maintainer review. G1 multi-agent rehearsal is deferred for budget reasons and remains unverified.
 
 ## Documentation
 

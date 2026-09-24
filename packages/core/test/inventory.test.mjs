@@ -259,11 +259,12 @@ test('scanProfile never yields a green status from absence of findings', () => {
   assert.equal(scan.summary.status, 'unknown');
 });
 
-test('scanProfile produces a schema-valid report for every non-missing fixture', async () => {
+test('scanProfile produces a schema-valid report for every fixture including missing packages', async () => {
   const fixtures = [
     ['consistent', 'unknown'],
     ['mixed', 'degraded'],
     ['broken', 'scan_error'],
+    ['missing', 'scan_error'],
   ];
   // An injected resolved identity keeps these expectations independent of
   // whatever dsh happens to be installed on the machine running the tests.

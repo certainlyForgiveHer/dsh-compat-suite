@@ -124,6 +124,19 @@ test('schema capability: report v1 can express manifest/lock/actual three-way ve
   assert.ok(result.valid, `three-way version mismatch must be expressible: ${result.errors.join('; ')}`);
 });
 
+test('schema capability: report v1 can express a missing package with null actualVersion and lockVersion', async () => {
+  const schema = await loadJson('schemas/report-v1.schema.json');
+  const base = await loadJson('fixtures/golden/validated-compatible.json');
+  assert.ok(schema && base);
+
+  const report = clone(base);
+  const plugin = report.plugins[0];
+  plugin.actualVersion = null;
+  plugin.lockVersion = null;
+  const result = validateAgainstSchema(report, schema);
+  assert.ok(result.valid, 'null actualVersion/lockVersion for a missing package must be expressible: ' + result.errors.join('; '));
+});
+
 test('schema capability: report v1 can express smoke coverage scope and what it did not cover', async () => {
   const report = await loadJson('fixtures/golden/validated-compatible.json');
   assert.ok(report);

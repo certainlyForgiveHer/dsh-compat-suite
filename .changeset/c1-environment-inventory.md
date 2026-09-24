@@ -35,3 +35,11 @@ with the other packages.
 
 Read-only by construction: no profile writes, no install, no restart, no
 arbitrary shell execution and no network access.
+
+The frozen report v1 schema now allows `null` for `lockVersion` and
+`actualVersion` (via a new `exactVersionOrNull` definition), matching the
+field descriptions that always declared them nullable when a package is absent
+from the lock or node_modules. Previously a `scan --json` report for a
+missing-package fixture could not pass schema validation. docs/01 §7.3 and
+docs/07 are aligned so that `package-missing` yields `scan_error` when the
+plugin is still enabled and `degraded` when the patch layer disabled it.

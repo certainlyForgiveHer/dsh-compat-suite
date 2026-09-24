@@ -23,7 +23,7 @@ dsh 兼容性套件是一套用于发现、解释和预防 DeepSeek Harness（`d
 
 ## 项目状态
 
-`G0` 已完成。根据[维护者决策](docs/decisions/single-agent-m0.md)，当前下一阶段为单 Agent 模式的 `M0`（契约与安全基线）。G1 多 Agent 演练因预算限制延期，保持未验证；M0 实现尚未完成。
+`G0` 与 `M0`（契约与安全基线）已完成。`C1`（环境发现与 `scan` 命令）已实现（[PR #13](https://github.com/certainlyForgiveHer/dsh-compat-suite/pull/13)，维护者评审中）。G1 多 Agent 演练因预算限制延期，保持未验证。
 
 ## 文档
 

@@ -16,6 +16,10 @@
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
     },
+    "exactVersionOrNull": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
     "sha256Digest": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
@@ -162,11 +166,11 @@
           },
           "lockVersion": {
             "description": "Version resolved by the lockfile; null when absent from the lock.",
-            "$ref": "#/definitions/exactVersion"
+            "$ref": "#/definitions/exactVersionOrNull"
           },
           "actualVersion": {
             "description": "Version found in node_modules; null when the package directory is missing. Together with manifestSpecifier and lockVersion this expresses the manifest/lock/actual three-way identity.",
-            "$ref": "#/definitions/exactVersion"
+            "$ref": "#/definitions/exactVersionOrNull"
           },
           "integrity": {
             "$ref": "#/definitions/sha512Integrity"

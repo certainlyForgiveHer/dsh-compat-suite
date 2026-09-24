@@ -234,7 +234,7 @@ manifest specifier ↔ lockfile resolved version ↔ node_modules actual version
 - 三方一致：版本身份可信。
 - manifest 与 lockfile 不一致：`degraded`，提示重新生成 lockfile。
 - lockfile 与实际安装不一致：`degraded`；候选 smoke 不得复用该 node_modules。
-- 包目录缺失：`scan_error` 或 `incompatible`，取决于插件是否仍在 bundles 中启用。
+- 包目录缺失：仍启用 ⇒ `scan_error`；patch 层已禁用 ⇒ `degraded`（非阻断）。
 - 同名插件出现多个实际版本：报告全部路径，标记 `ambiguous-resolution`。
 
 ## 8. 兼容性规则引擎
