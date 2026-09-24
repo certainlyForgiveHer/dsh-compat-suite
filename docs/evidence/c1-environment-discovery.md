@@ -206,6 +206,7 @@ docs/03 §7 的 C1 交付物「bundle loader ID 与 disabled 状态解析」以�
 | 全链（不回归） | `pnpm run verify`（G0 + M0 + 契约 22 + build + typecheck + 全部包测试） | pass；exit 0 |
 | 新增测试 | `node --test packages/core/test/loaders.test.mjs` | pass；17/17 |
 | 既有包测试 | core / cli / plugin | pass；26 / 1 / 1 |
+| CI（PR #13，head `dddc5f9`） | `quality / node-22.x`、`node-24.x`、`node-26.x` | 全部 pass（`pnpm install --frozen-lockfile` + `pnpm verify`）；无依赖与 lockfile 变更 |
 
 ### 语义变更（提请评审确认）
 
