@@ -1,0 +1,10 @@
+{
+  "name": "dsh-profile-loaders",
+  "private": true,
+  "dependencies": {
+    "bundle-a": "1.0.0",
+    "bundle-b": "2.0.0",
+    "bundle-d": "4.0.0",
+    "plain-c": "3.0.0"
+  }
+}

@@ -80,7 +80,7 @@
 | peer-mismatch-optional | optional peer 不匹配，仅记录不阻断 | unknown | manifest |
 | version-skew-manifest-lock | manifest 与 lockfile 解析版本不一致 | degraded | lock |
 | version-skew-lock-actual | lockfile 与实际安装版本不一致 | degraded | lock |
-| package-missing | 声明启用的插件在 node_modules 中缺失 | scan_error | lock |
+| package-missing | 声明启用的插件在 node_modules 中缺失；仍启用 ⇒ scan_error，patch 层已禁用 ⇒ degraded（非阻断） | scan_error | lock |
 | ambiguous-resolution | 同名插件解析出多个实际版本 | degraded | lock |
 | missing-host-api | 插件引用的宿主 API 明确不存在 | incompatible | host_api |
 | analysis-incomplete | 静态分析无法覆盖的 API 使用方式 | unknown | heuristic |

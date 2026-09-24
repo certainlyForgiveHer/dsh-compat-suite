@@ -1,0 +1,15 @@
+# Synthetic bundle patch shaped like the shipped dsh bundle patches.
+- insert:
+    - id: a-row-1
+      name: bundle-a
+
+    - id: a-row-2
+      name: bundle-a
+      disabled: true
+      config:
+        note: >-
+          a folded block scalar, exactly the shape the real
+          bundle patches use for multi-line configuration
+
+    - id: a-shared
+      name: bundle-a

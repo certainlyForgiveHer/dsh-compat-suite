@@ -1,0 +1,25 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+  .:
+    dependencies:
+      alpha-plugin:
+        specifier: 1.0.0
+        version: 1.0.0
+      beta-plugin:
+        specifier: ~2.1.0
+        version: 2.1.4
+
+packages:
+  alpha-plugin@1.0.0:
+    resolution: {integrity: sha512-AAAACONSISTENTALPHA0000000000000000000000000000000000000000000==}
+  beta-plugin@2.1.4:
+    resolution: {integrity: sha512-BBBB0000000000000000000000000000000000000000000000000000000000==}
+
+snapshots:
+  alpha-plugin@1.0.0: {}
+  beta-plugin@2.1.4: {}

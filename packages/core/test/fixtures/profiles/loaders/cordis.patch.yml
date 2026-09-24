@@ -1,0 +1,8 @@
+# Profile layer, applied after every bundle patch. Rows are addressed by id.
+- id: b-row
+  disabled: true
+
+- insert:
+    - id: d-row
+      name: bundle-d
+      disabled: true

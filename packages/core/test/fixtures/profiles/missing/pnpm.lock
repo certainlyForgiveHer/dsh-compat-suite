@@ -1,0 +1,25 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+  .:
+    dependencies:
+      present-plugin:
+        specifier: 1.0.0
+        version: 1.0.0
+      missing-plugin:
+        specifier: 3.0.0
+        version: 3.0.0
+
+packages:
+  present-plugin@1.0.0:
+    resolution: {integrity: sha512-PPPRESENT0000000000000000000000000000000000000000000000000000000==}
+  missing-plugin@3.0.0:
+    resolution: {integrity: sha512-MMMMMISSING000000000000000000000000000000000000000000000000000000==}
+
+snapshots:
+  present-plugin@1.0.0: {}
+  missing-plugin@3.0.0: {}

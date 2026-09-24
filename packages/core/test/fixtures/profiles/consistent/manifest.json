@@ -1,0 +1,8 @@
+{
+  "name": "dsh-profile-consistent",
+  "private": true,
+  "dependencies": {
+    "alpha-plugin": "1.0.0",
+    "beta-plugin": "~2.1.0"
+  }
+}
