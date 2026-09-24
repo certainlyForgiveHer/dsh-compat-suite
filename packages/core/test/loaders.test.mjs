@@ -132,5 +132,5 @@ test('discovering loader rows never turns a scan green', () => {
 test('a malformed profile patch is a scan error, not a silently empty loader set', () => {
   const result = reconcilePlugins(profilePath('loaders-broken'), FIXTURE_LAYOUT);
   assert.equal(result.error?.code, 'scan-infrastructure-error');
-  assert.equal(scanProfile(profilePath('loaders-broken'), withLayout()).status, 'scan_error');
+  assert.equal(scanProfile(profilePath('loaders-broken'), withLayout()).summary.status, 'scan_error');
 });

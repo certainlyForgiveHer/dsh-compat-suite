@@ -9,7 +9,16 @@ export { isExactVersion, isPackageName, pinnedVersionFromSpecifier } from './ver
 export { parseYaml, YamlParseError } from './yaml.js';
 export type { YamlValue } from './yaml.js';
 
-export { parseLockPackageKey, parseNodeModules, parseProfileManifest, parsePnpmLock } from './parsers.js';
+export {
+  discoverLoaderState,
+  loaderStateForPlugin,
+  parseCordisPatch,
+  parseLockPackageKey,
+  parseNodeModules,
+  parseProfileManifest,
+  parsePnpmLock,
+  readCordisPatch,
+} from './parsers.js';
 
 export { reconcilePlugins } from './reconcile.js';
 
@@ -22,10 +31,17 @@ export type { BuildReportInput, BuiltReport, DerivedFinding, Policy, ScanProfile
 export { DOCTOR_VERSION, FIXED_RUN, runScan } from './scan.js';
 export type { RunScanOptions, RunScanResult } from './scan.js';
 
-export { AGGREGATION_ORDER, C1_FINDING_CODES, SIX_STATES } from './inventory-types.js';
+export {
+  AGGREGATION_ORDER,
+  C1_FINDING_CODES,
+  DEFAULT_PROFILE_PATCH_FILE,
+  SIX_STATES,
+} from './inventory-types.js';
 export type {
   ActualPackage,
   CompatibilityState,
+  CordisPatch,
+  CordisPatchRow,
   CorePackageVersion,
   EvidenceLevel,
   FindingCodeSpec,
@@ -33,6 +49,7 @@ export type {
   LockPackage,
   ParseError,
   PluginInventory,
+  PluginLoaderState,
   PluginReconcile,
   PnpmLock,
   ProfileIdentity,

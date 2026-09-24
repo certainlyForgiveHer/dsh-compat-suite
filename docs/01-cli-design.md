@@ -205,6 +205,22 @@ dsh-compat-doctor explain <finding-id> --report <report.json>
 
 不得递归读取插件数据目录、会话日志、credentials、工作区源代码或任意未声明路径。
 
+#### 7.2.1 bundle loader ID 与 disabled 状态
+
+loader 行从上面两个 patch 来源解析，行的 `name` 就是该行接线的 package：
+
+1. 插件 package 用自身 manifest 的 `dsh.bundle.patch` 声明其 patch 文件（相对该 package 目录）；其中 `name` 等于该插件的行贡献它的 loader ID。
+2. profile 的 `cordis.patch.yml` 最后应用，按 `id` 覆盖已有行（last write wins）；按 `name` 命名的行也可以新增 loader ID。
+3. 插件的 `enabled` 由存活行决定：至少一个未 disabled 的行即 enabled，全部 disabled 即 disabled。
+4. 插件没有任何可发现的 loader 行时**不臆测** bundle 状态：`loaderIds` 保持空数组，`enabled` 回退到「manifest 是否声明」的判断。
+
+失败语义：
+
+- profile 自身的 `cordis.patch.yml` 不可读或无法解析 → `scan-infrastructure-error`（与损坏 lockfile 同级），不崩溃、不给出绿色；
+- 第三方插件声明的 bundle patch 不可读或无法解析 → 尽力而为，该插件的 loader 行视为未知，不阻断整次扫描。
+
+读取层必须支持块标量（`|`、`>` 及其 chomping/显式缩进变体），因为真实 `cordis.patch.yml` 用它承载多行配置；`!!js` 等标签按不透明文本处理，**绝不求值**。
+
 ### 7.3 三方版本一致性
 
 每个插件必须比较：

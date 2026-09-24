@@ -10,12 +10,15 @@
  * leniency here would be a correctness bug.
  *
  * Supported: block mappings and sequences, nested indentation, flow mappings
- * `{a: b}`, flow sequences `[a, b]`, single/double quoted scalars, comments,
+ * `{a: b}`, flow sequences `[a, b]`, single/double quoted scalars, block
+ * scalars (`|` and `>`, with chomping and explicit indentation), comments,
  * `null`/`~`, booleans, integers, floats and empty values.
  *
  * Not supported (rejected): tabs for indentation, duplicate keys in one block,
  * keys with neither a value nor a nested block, unterminated quotes or flow
- * collections, anchors, aliases, tags and multi-document streams.
+ * collections, anchors, aliases and multi-document streams. A tag such as
+ * `!!js` is never evaluated: it stays part of the scalar text, so a patch file
+ * carrying an expression is read as data and the expression is never run.
  */
 
 export type YamlValue = string | number | boolean | null | YamlValue[] | { [key: string]: YamlValue };
@@ -52,17 +55,144 @@ function stripComment(text: string): string {
   return text;
 }
 
+/**
+ * Block scalar header: `|` or `>` optionally followed by a chomping indicator
+ * and/or an explicit indentation digit (`|`, `|-`, `|+`, `|2`, `>-2`).
+ *
+ * Every shipped `cordis.patch.yml` uses one of these for its multi-line
+ * configuration values, so a reader that rejected them could not read a real
+ * patch file at all.
+ */
+const BLOCK_HEADER = /(^|\s)([|>])([+-]?)(\d?)$/;
+
+/** Whether a candidate header prefix leaves a quote open (so it is not a header). */
+function hasUnbalancedQuote(text: string): boolean {
+  let single = 0;
+  let double = 0;
+  for (const char of text) {
+    if (char === "'") single += 1;
+    else if (char === '"') double += 1;
+  }
+  return single % 2 === 1 || double % 2 === 1;
+}
+
+/**
+ * Fold a `>` block scalar's content lines.
+ *
+ * A single break between two plain lines folds into a space, a blank line
+ * becomes a line break, and a more-indented line keeps its own break — the
+ * folding rules the shipped patch files rely on.
+ */
+function foldBlockLines(lines: readonly string[]): string {
+  let out = '';
+  let pendingBreaks = 0;
+  let started = false;
+  let previousIndented = false;
+  for (const line of lines) {
+    if (line === '') {
+      pendingBreaks += 1;
+      continue;
+    }
+    const indented = /^[ \t]/.test(line);
+    if (!started) {
+      out = line;
+      started = true;
+    } else if (pendingBreaks > 0) {
+      out += '\n'.repeat(pendingBreaks) + line;
+    } else if (indented || previousIndented) {
+      out += `\n${line}`;
+    } else {
+      out += ` ${line}`;
+    }
+    previousIndented = indented;
+    pendingBreaks = 0;
+  }
+  return out;
+}
+
+/**
+ * Consume a block scalar starting after its header line.
+ *
+ * `next` is the first raw line the scalar did not consume, so trailing blank
+ * lines are counted for chomping and the following key is left for the normal
+ * line loop. Content is taken verbatim: a `#` inside a block scalar is data,
+ * not a comment.
+ */
+function readBlockScalar(
+  rawLines: readonly string[],
+  headerIndex: number,
+  parentIndent: number,
+  header: RegExpMatchArray,
+): { value: string; next: number } {
+  const literal = header[2] === '|';
+  const chomping = header[3] === '-' ? 'strip' : header[3] === '+' ? 'keep' : 'clip';
+  const explicit = header[4] === '' ? null : Number(header[4]);
+
+  const collected: string[] = [];
+  let pendingBlanks = 0;
+  let next = rawLines.length;
+  let baseIndent = explicit === null ? -1 : parentIndent + explicit;
+
+  for (let index = headerIndex + 1; index < rawLines.length; index += 1) {
+    const raw = rawLines[index];
+    if (raw.trim() === '') {
+      pendingBlanks += 1;
+      continue;
+    }
+    const indent = raw.length - raw.trimStart().length;
+    if (baseIndent === -1) {
+      if (indent <= parentIndent) {
+        next = index;
+        break;
+      }
+      baseIndent = indent;
+    } else if (indent < baseIndent) {
+      next = index;
+      break;
+    }
+    for (let blank = 0; blank < pendingBlanks; blank += 1) collected.push('');
+    pendingBlanks = 0;
+    collected.push(raw.slice(baseIndent));
+  }
+
+  const body = literal ? collected.join('\n') : foldBlockLines(collected);
+  let value: string;
+  if (collected.length === 0) value = chomping === 'keep' ? '\n'.repeat(pendingBlanks) : '';
+  else if (chomping === 'strip') value = body;
+  else if (chomping === 'keep') value = `${body}\n${'\n'.repeat(pendingBlanks)}`;
+  else value = `${body}\n`;
+  return { value, next };
+}
+
 function tokenize(source: string): Line[] {
   const lines: Line[] = [];
   const rawLines = source.split(/\r?\n/);
-  for (let index = 0; index < rawLines.length; index += 1) {
+  let index = 0;
+  while (index < rawLines.length) {
     const raw = rawLines[index];
     if (/^\t|^ *\t/.test(raw)) throw new YamlParseError('tab indentation is not allowed in YAML', index);
     const withoutComment = stripComment(raw);
-    if (withoutComment.trim() === '') continue;
-    if (withoutComment.trim() === '---' || withoutComment.trim() === '...') continue;
+    const trimmed = withoutComment.trim();
+    if (trimmed === '' || trimmed === '---' || trimmed === '...') {
+      index += 1;
+      continue;
+    }
     const indent = withoutComment.length - withoutComment.trimStart().length;
-    lines.push({ indent, content: withoutComment.trim(), number: index });
+
+    const header = trimmed.match(BLOCK_HEADER);
+    const headerText = header === null ? '' : header[2] + header[3] + header[4];
+    const prefix = header === null ? '' : trimmed.slice(0, trimmed.length - headerText.length);
+    if (header !== null && !hasUnbalancedQuote(prefix)) {
+      const scalar = readBlockScalar(rawLines, index, indent, header);
+      // The scalar becomes one quoted line, so every other rule (indentation
+      // checks, duplicate keys, strict rejection) applies to it unchanged.
+      lines.push({ indent, content: `${prefix}${JSON.stringify(scalar.value)}`, number: index });
+      index = scalar.next;
+      continue;
+    }
+
+    lines.push({ indent, content: trimmed, number: index });
+    index += 1;
   }
   return lines;
 }

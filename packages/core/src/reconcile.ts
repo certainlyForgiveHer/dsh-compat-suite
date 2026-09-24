@@ -10,7 +10,7 @@
  *   package-missing, ambiguous-resolution, scan-infrastructure-error
  */
 
-import { parseNodeModules, parseProfileManifest, parsePnpmLock } from './parsers.js';
+import { discoverLoaderState, parseNodeModules, parseProfileManifest, parsePnpmLock } from './parsers.js';
 import { pinnedVersionFromSpecifier, isExactVersion } from './version.js';
 import { defaultProfileLayout } from './inventory-types.js';
 import type { ParseError, PluginReconcile, ProfileLayout, ReconcileResult } from './inventory-types.js';
@@ -49,6 +49,15 @@ export function reconcilePlugins(
   const names = new Set<string>([...Object.keys(manifest.dependencies), ...lock.specifiers.keys()]);
   const pluginOrder = [...names].sort();
 
+  // Loader discovery reads the profile's own cordis patch layer. A layer that
+  // cannot be read is an infrastructure error like a corrupted lockfile: the
+  // disabled state decides whether a missing package is a scan error or a
+  // degradation, so guessing it would silently change the conclusion.
+  const loaders = discoverLoaderState(profilePath, layout, actual, pluginOrder);
+  if (loaders.error !== null) {
+    return { error: loaders.error, byName: new Map(), pluginOrder: [], actualVersions };
+  }
+
   const byName = new Map<string, PluginReconcile>();
   for (const name of pluginOrder) {
     const manifestSpecifier = manifest.dependencies[name] ?? null;
@@ -59,13 +68,16 @@ export function reconcilePlugins(
     const ambiguous = versions.length > 1;
     const actualVersion = versions.length === 0 ? null : versions[0];
 
+    const loaderState = loaders.byName.get(name) ?? { loaderIds: [], enabled: null };
+
     let reconcileCode: string | null = null;
     if (ambiguous) {
       reconcileCode = 'ambiguous-resolution';
     } else if (actualVersion === null) {
       // Declared or locked but absent from node_modules. docs/01 section 7.3
-      // allows scan_error or incompatible depending on whether the plugin is
-      // still enabled; C1 reports the identity fact and leaves the state to C2.
+      // keys the outcome on whether the plugin is still enabled: the loader
+      // layers decide that, and the manifest declaration is only the fallback
+      // when no loader row names the plugin at all.
       reconcileCode = 'package-missing';
     } else {
       const pinned = pinnedVersionFromSpecifier(manifestSpecifier);
@@ -87,8 +99,8 @@ export function reconcilePlugins(
       lockVersion,
       actualVersion,
       integrity: lockEntry?.integrity ?? null,
-      enabled: manifestSpecifier !== null,
-      loaderIds: [],
+      enabled: loaderState.enabled ?? manifestSpecifier !== null,
+      loaderIds: loaderState.loaderIds,
       ambiguous,
       reconcileCode,
     });

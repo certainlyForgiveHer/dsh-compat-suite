@@ -15,6 +15,14 @@ registry codes `host-version-skew`, `host-identity-unresolved`,
 `package-missing`, `ambiguous-resolution` and
 `scan-infrastructure-error`. Discovery alone never yields a green state.
 
+Loader discovery is now real rather than a placeholder: the profile's
+`cordis.patch.yml` and each plugin's declared `dsh.bundle.patch` are parsed for
+loader ids, and `enabled` follows the rows that survive the profile layer's
+per-id overrides. A plugin with no discoverable row keeps the manifest-declared
+fallback instead of a fabricated bundle state. This is what lets
+`package-missing` report a scan error for a plugin that is still enabled and a
+degradation for one the patch layer disabled.
+
 `@miguel_tu/doctor` gains `scan --json`, which emits a report v1 document
 with paths aliased and secrets stripped. The command accepts
 `--profile <name|path>`, `--dsh-bin`, `--dsh-home`, `--json`, `--strict`

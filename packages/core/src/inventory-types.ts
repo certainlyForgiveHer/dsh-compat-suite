@@ -74,7 +74,16 @@ export interface ProfileLayout {
   readonly lockfile: string;
   readonly storeDir: string;
   readonly virtualStoreDir: string;
+  /**
+   * The profile's own cordis patch layer. Only loader entries and the disabled
+   * state are read from it (docs/01-cli-design.md section 7.2). Optional so a
+   * synthetic layout can omit it and fall back to the real name.
+   */
+  readonly patchFile?: string;
 }
+
+/** The profile's own cordis patch layer, per the dsh profile layout. */
+export const DEFAULT_PROFILE_PATCH_FILE = 'cordis.patch.yml';
 
 export function defaultProfileLayout(): ProfileLayout {
   return {
@@ -82,6 +91,7 @@ export function defaultProfileLayout(): ProfileLayout {
     lockfile: 'pnpm-lock.yaml',
     storeDir: 'node_modules',
     virtualStoreDir: path.join('node_modules', '.pnpm'),
+    patchFile: DEFAULT_PROFILE_PATCH_FILE,
   };
 }
 
@@ -119,6 +129,37 @@ export interface PluginReconcile {
   readonly loaderIds: readonly string[];
   readonly ambiguous: boolean;
   readonly reconcileCode: string | null;
+}
+
+/**
+ * One loader row discovered in a cordis patch layer.
+ *
+ * `id` is the loader row id, `name` the package the row wires (null when the
+ * row only overrides an existing id), and `disabled` the row's declared state.
+ */
+export interface CordisPatchRow {
+  readonly id: string;
+  readonly name: string | null;
+  readonly disabled: boolean;
+}
+
+/** A patch layer as read from disk, or the error that stopped it being read. */
+export interface CordisPatch {
+  readonly path: string;
+  readonly rows: readonly CordisPatchRow[];
+  readonly error: ParseError | null;
+}
+
+/**
+ * What the loader layers say about one plugin.
+ *
+ * `enabled` is null when no loader row names the plugin at all, which is not
+ * the same as disabled: the caller then keeps the manifest-derived fallback
+ * instead of inventing a bundle state.
+ */
+export interface PluginLoaderState {
+  readonly loaderIds: readonly string[];
+  readonly enabled: boolean | null;
 }
 
 export interface ReconcileResult {

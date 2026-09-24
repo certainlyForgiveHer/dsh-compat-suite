@@ -152,8 +152,67 @@ clean  query token params
 ## Known limitations and deferred items
 
 - **冻结 schema 无法表达「包缺失」**：`lockVersion` / `actualVersion` 的 schema 描述声明可为 null，但强制类型为 `exactVersion`（`type: "string"`）。已用仓库自带校验器复现（`actualVersion: null` → `valid: false`），并按 AGENTS.md §2 上报为 #12 的 `BLOCKED` 事件，未自行放宽（该文件在 `forbidden_scope` 内）。当前实现用内部 `missing` 状态表达缺失，reconcile 检测与测试均已通过；**待维护者裁定修复方式后**再落最终报告字段。
-- `loaderIds` 恒为空数组：C1 未读取 `cordis.patch.yml` 的 loader 条目（该取证在 C3/C4 范围）。已知并在 `uncheckedFeatures`/`notCovered` 中明示，不猜测。
+- `loaderIds` 与 `enabled` 的 loader 取证已补齐（见下文「Loader discovery completion」）。仍未覆盖：行内 `config` 内容不解析；完整 patch 合成（`dsh.profile.bundles` 顺序、home 层 `$DSH_HOME/cordis.patch.yml`、`--patch` 覆盖）不在 C1 范围，只解析 profile 自身层与插件自身声明的 patch。
 - `smokeCoverage.result` 恒为 `not-run`：C1 不执行隔离启动验证（属 C4）。
 - 报告中的 `binaryRealpath` 可保留 `/opt/homebrew/...` 这类系统安装路径：它不是用户目录，`docs/07` §6 的别名表（dsh home / profile / tmp）未覆盖系统路径，且 `/Users/<user>` 形态已被兜底别名化。若维护者要求连系统路径也别名化，需扩充别名表。
 - 插件状态恒为 `unknown`（有缺陷时为 `degraded`/`scan_error`）：C1 只做发现，不做兼容判定（C2 范围）。
 - secret 模式匹配为尽力而为：覆盖 Bearer/Basic、常见 provider key 前缀、JWT 形态与敏感 query 参数；不声称穷尽所有凭据形态。
+
+## Loader discovery completion（2026-09-24，agent `dsh-compat-impl-02`）
+
+### 补齐的交付物
+
+docs/03 §7 的 C1 交付物「bundle loader ID 与 disabled 状态解析」以及 docs/01 §7.2/§12.2 的对应契约此前未实现（`loaderIds` 恒为空数组，`enabled` 只由 manifest 声明推断）。本会话补齐：
+
+| 交付物 | 路径 |
+| --- | --- |
+| 读取层支持块标量（`|`/`>` + chomping + 显式缩进）；`!!js` 标签保持不透明文本，绝不求值 | `packages/core/src/yaml.ts` |
+| cordis patch 行解析：`insert:` 行与被 `id` 定位的行 | `packages/core/src/parsers.ts`（`parseCordisPatch`、`readCordisPatch`） |
+| 插件自身 `dsh.bundle.patch` + profile 层按 `id` 覆盖（last write wins）的 loader 状态合成 | `packages/core/src/parsers.ts`（`loaderStateForPlugin`、`discoverLoaderState`） |
+| 接入三方 reconcile：`loaderIds`/`enabled` 真实化；profile patch 不可读 ⇒ scan 错误 | `packages/core/src/reconcile.ts` |
+| 合成 fixture：bundle patch、profile 覆盖、缺失但被禁用的 bundle、损坏 patch | `packages/core/test/fixtures/profiles/loaders/`、`loaders-broken/` |
+| 17 项测试（YAML 块标量 6、patch 行 3、loader 语义与阴性检查 8） | `packages/core/test/loaders.test.mjs` |
+| 设计基线补充块 7.2.1 | `docs/01-cli-design.md` |
+
+### 先建立失败基线
+
+基线提交 `cd14737`：新增测试当时因「块标量被读取层拒绝 + `parseCordisPatch` 不存在 + `loaderIds` 为空」而失败（AGENTS.md §3 第 8 步），实现后转绿。
+
+### 真实发行物语料验证（read-only，非用户 profile 数据）
+
+对 dsh 发行包内的 6 个 bundle patch（`dsh-base`、`dsh-web-app`、`dsh-sdk-app`、`dsh-sdk-minimal`、`dsh-headless`、`dsh-acp-app` 的 `cordis.patch.yml`）运行读取层：
+
+| 结果 | 值 |
+| --- | --- |
+| 解析成功 | 6/6（实现前 0/6，全部 `unexpected indentation in mapping`） |
+| 发现的 loader 行 | 222 |
+| 其中 `disabled: true` | 28 |
+
+`dsh-base` 单层 84 行、`dsh-web-app` 单层 94 行（含 24 行 disabled）。也就是说：实现前 C1 在任何真实 profile 上都拿不到 loader ID，而现在能拿到。
+
+端到端（**默认生产布局**，非注入式 fixture；profile 与插件包在临时目录中合成，patch 文件为真实发行件，未读取任何真实用户 profile）：
+
+| 步骤 | 结果 |
+| --- | --- |
+| 以 `dsh-base` 层中真实接线的包 `@deepseek-ai/dsh-tool-subagent` 建包并声明 `dsh.bundle.patch` | 发现 2 个 loader ID：`tool-subagent`、`tool-subagent-fork`，与真实行逐字一致 |
+| profile 层对这两行写 `disabled: true` | `enabled = false` |
+| profile 层不禁用（`disabled: false`） | `enabled = true`，`loaderIds` 仍为 2 |
+| 包名与任何行都不匹配时 | `loaderIds = []`、回退到 manifest 判断——**不臆造** loader 行 |
+
+### 本地验证
+
+| Check | Command | Result |
+| --- | --- | --- |
+| 全链（不回归） | `pnpm run verify`（G0 + M0 + 契约 22 + build + typecheck + 全部包测试） | pass；exit 0 |
+| 新增测试 | `node --test packages/core/test/loaders.test.mjs` | pass；17/17 |
+| 既有包测试 | core / cli / plugin | pass；26 / 1 / 1 |
+
+### 语义变更（提请评审确认）
+
+`package-missing` 的状态现在按 docs/01 §7.3 原文依赖 loader 启用状态：**仍启用却缺失 ⇒ `scan_error`；patch 层已禁用且缺失 ⇒ `degraded`**。此前两种情况均为 `scan_error`。同时 `enabled` 不再等同于「manifest 是否声明」。
+
+### 仍未闭合（交维护者裁定）
+
+1. 冻结 schema 的 `exactVersion` 不可为 null（见上文第一条限制），仍使「包缺失」场景的 `scan --json` 无法通过 schema 校验；修复需 M0 变更评审或 scope revision，本会话未越权修改 `schemas/report-v1.schema.json`。
+2. loader 取证只覆盖 profile 自身层与插件自身 patch；完整合成顺序（`dsh.profile.bundles`、home 层、`--patch`）留待 C3/C4。
+3. 本会话的写入授权来自维护者在会话内的直接指令；**未**发布新的 `CLAIM_REQUESTED`/`CLAIM_CONFIRMED` 事件，提交 trailer 使用新 `agent_id` `dsh-compat-impl-02` 以示与前任认领区分。

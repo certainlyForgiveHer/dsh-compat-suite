@@ -13,7 +13,17 @@ import path from 'node:path';
 import { parseYaml, YamlParseError } from './yaml.js';
 import { isExactVersion } from './version.js';
 import { defaultProfileLayout } from './inventory-types.js';
-import type { ActualPackage, ParseError, PnpmLock, ProfileLayout, ProfileManifest } from './inventory-types.js';
+import { DEFAULT_PROFILE_PATCH_FILE } from './inventory-types.js';
+import type {
+  ActualPackage,
+  CordisPatch,
+  CordisPatchRow,
+  ParseError,
+  PluginLoaderState,
+  PnpmLock,
+  ProfileLayout,
+  ProfileManifest,
+} from './inventory-types.js';
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === 'object' && error !== null && 'code' in error;
@@ -384,4 +394,163 @@ export function parseNodeModules(
   }
 
   return { actual, errors };
+}
+
+// ------------------------------------------------------- cordis patch layer
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Parse one cordis patch layer into its loader rows.
+ *
+ * A layer is a list of operations: `{ insert: [row, ...] }` adds rows, and a
+ * bare `{ id: ... }` addresses an existing row, because every later layer
+ * overrides by id with the last write winning. A row's `name` is the package
+ * it wires, which is what matches a plugin to its loader ids.
+ *
+ * Anything without a usable string `id` is not a loader row and is ignored;
+ * malformed YAML is rejected rather than guessed, exactly like the lockfile
+ * reader. A tag such as `!!js` stays scalar text and is never evaluated.
+ */
+export function parseCordisPatch(source: string): CordisPatchRow[] {
+  const parsed = parseYaml(source);
+  const operations = parsed === null ? [] : Array.isArray(parsed) ? parsed : [parsed];
+  const rows: CordisPatchRow[] = [];
+
+  const push = (candidate: unknown): void => {
+    if (!isPlainObject(candidate)) return;
+    const id = candidate.id;
+    if (typeof id !== 'string' || id === '') return;
+    const name = candidate.name;
+    rows.push({
+      id,
+      name: typeof name === 'string' && name !== '' ? name : null,
+      disabled: candidate.disabled === true,
+    });
+  };
+
+  for (const operation of operations) {
+    if (!isPlainObject(operation)) continue;
+    if (Array.isArray(operation.insert)) {
+      for (const inserted of operation.insert) push(inserted);
+      continue;
+    }
+    push(operation);
+  }
+
+  return rows;
+}
+
+/**
+ * Read one patch layer from disk.
+ *
+ * An absent file is normal — no profile and no bundle is required to carry
+ * one — so it is not an error. Unreadable or malformed content is, and the
+ * caller decides whether that is fatal: a profile's own layer is
+ * authoritative, a third-party bundle's is best effort.
+ */
+export function readCordisPatch(file: string): CordisPatch {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') return { path: file, rows: [], error: null };
+    return { path: file, rows: [], error: describeFsError(error, file) };
+  }
+
+  try {
+    return { path: file, rows: parseCordisPatch(raw), error: null };
+  } catch (error) {
+    return {
+      path: file,
+      rows: [],
+      error: {
+        code: 'scan-infrastructure-error',
+        message: `cannot parse cordis patch: ${error instanceof Error ? error.message : String(error)}`,
+        source: file,
+      },
+    };
+  }
+}
+
+/**
+ * Combine the rows a plugin's own bundle patch contributes with the profile's
+ * patch layer.
+ *
+ * The profile layer is applied last, so it wins for any id it addresses — that
+ * is how `dsh` disables a row the bundle shipped enabled, and `enabled`
+ * follows from the rows that survive. A plugin with no discovered row keeps
+ * `enabled: null`, which the caller turns back into the manifest-derived
+ * fallback rather than a fabricated bundle state.
+ */
+export function loaderStateForPlugin(
+  name: string,
+  bundleRows: readonly CordisPatchRow[],
+  profileRows: readonly CordisPatchRow[],
+): PluginLoaderState {
+  const byId = new Map<string, boolean>();
+  for (const row of bundleRows) {
+    if (row.name === name && !byId.has(row.id)) byId.set(row.id, row.disabled);
+  }
+  for (const row of profileRows) {
+    // A profile row either names this plugin or overrides an id the bundle
+    // patch already contributed; either way it is the last write for that id.
+    if (row.name === name || byId.has(row.id)) byId.set(row.id, row.disabled);
+  }
+
+  const loaderIds = [...byId.keys()];
+  if (loaderIds.length === 0) return { loaderIds, enabled: null };
+  return { loaderIds, enabled: [...byId.values()].some((disabled) => !disabled) };
+}
+
+/**
+ * Read the loader rows a plugin's own package declares.
+ *
+ * The declaration is `dsh.bundle.patch` in the installed package manifest,
+ * holding a path relative to the package directory. This is deliberately best
+ * effort: a bundle patch that cannot be read leaves that plugin's loader ids
+ * unknown, which must never fail the whole scan.
+ */
+function readBundlePatchRows(packageDir: string): readonly CordisPatchRow[] {
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
+  } catch {
+    return [];
+  }
+  if (!isPlainObject(manifest)) return [];
+  const bundle = isPlainObject(manifest.dsh) ? manifest.dsh.bundle : undefined;
+  if (!isPlainObject(bundle)) return [];
+  const patch = bundle.patch;
+  if (typeof patch !== 'string' || patch === '') return [];
+  return readCordisPatch(path.resolve(packageDir, patch)).rows;
+}
+
+/**
+ * Discover loader ids and disabled state for every plugin in a profile.
+ *
+ * The profile's own patch layer is authoritative: an unreadable or malformed
+ * one is returned as an error, because the loader state — and with it
+ * docs/01-cli-design.md section 7.3's package-missing decision — would
+ * otherwise be silently wrong rather than unknown.
+ */
+export function discoverLoaderState(
+  profilePath: string,
+  layout: ProfileLayout,
+  actual: ReadonlyMap<string, ActualPackage>,
+  names: readonly string[],
+): { byName: Map<string, PluginLoaderState>; error: ParseError | null } {
+  const patchFile = path.join(profilePath, layout.patchFile ?? DEFAULT_PROFILE_PATCH_FILE);
+  const profilePatch = readCordisPatch(patchFile);
+  const byName = new Map<string, PluginLoaderState>();
+
+  for (const name of names) {
+    const bundleRows: CordisPatchRow[] = [];
+    for (const packageDir of actual.get(name)?.paths ?? []) bundleRows.push(...readBundlePatchRows(packageDir));
+    byName.set(name, loaderStateForPlugin(name, bundleRows, profilePatch.rows));
+  }
+
+  return { byName, error: profilePatch.error };
 }
