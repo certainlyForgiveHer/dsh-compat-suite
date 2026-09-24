@@ -1,0 +1,7 @@
+{
+  "name": "dsh-profile-loaders-broken",
+  "private": true,
+  "dependencies": {
+    "alpha-plugin": "1.0.0"
+  }
+}

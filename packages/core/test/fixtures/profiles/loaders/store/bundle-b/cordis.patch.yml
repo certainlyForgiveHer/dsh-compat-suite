@@ -1,0 +1,7 @@
+- insert:
+    - id: b-row
+      name: bundle-b
+      config:
+        banner: |
+          literal block scalar
+          second line

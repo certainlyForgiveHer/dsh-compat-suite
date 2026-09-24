@@ -1,0 +1,37 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+  .:
+    dependencies:
+      bundle-a:
+        specifier: 1.0.0
+        version: 1.0.0
+      bundle-b:
+        specifier: 2.0.0
+        version: 2.0.0
+      bundle-d:
+        specifier: 4.0.0
+        version: 4.0.0
+      plain-c:
+        specifier: 3.0.0
+        version: 3.0.0
+
+packages:
+  bundle-a@1.0.0:
+    resolution: {integrity: sha512-AAAAABUNDLEA00000000000000000000000000000000000000000000000000==}
+  bundle-b@2.0.0:
+    resolution: {integrity: sha512-BBBBBUNDLEB00000000000000000000000000000000000000000000000000==}
+  bundle-d@4.0.0:
+    resolution: {integrity: sha512-DDDDDBUNDLED00000000000000000000000000000000000000000000000000==}
+  plain-c@3.0.0:
+    resolution: {integrity: sha512-CCCCCPLAINC00000000000000000000000000000000000000000000000000==}
+
+snapshots:
+  bundle-a@1.0.0: {}
+  bundle-b@2.0.0: {}
+  bundle-d@4.0.0: {}
+  plain-c@3.0.0: {}
