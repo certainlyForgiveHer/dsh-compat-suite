@@ -1,0 +1,15 @@
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      @linxin666/dsh-client-ui-task-board:
+        specifier: 0.3.10
+        version: 0.3.10
+
+packages:
+  @linxin666/dsh-client-ui-task-board@0.3.10:
+    resolution: {integrity: sha512-KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK}
+
+snapshots:
+  @linxin666/dsh-client-ui-task-board@0.3.10: {}

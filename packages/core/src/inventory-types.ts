@@ -40,18 +40,31 @@ export interface FindingCodeSpec {
 }
 
 /**
- * Subset of the docs/07 section 4 registry owned by C1 (identity and
- * infrastructure findings). C2 owns the engine/peer/API judgement codes.
+ * The full frozen finding-code registry lives in finding-registry.ts (it
+ * mirrors docs/07-m0-contract.md section 4 one-to-one). The C1 subset is
+ * projected from it so there is exactly one registry source.
  */
-export const C1_FINDING_CODES: Readonly<Record<string, FindingCodeSpec>> = Object.freeze({
-  'host-version-skew': { minStatus: 'degraded', evidenceLevel: 'lock' },
-  'host-identity-unresolved': { minStatus: 'scan_error', evidenceLevel: 'lock' },
-  'version-skew-manifest-lock': { minStatus: 'degraded', evidenceLevel: 'lock' },
-  'version-skew-lock-actual': { minStatus: 'degraded', evidenceLevel: 'lock' },
-  'package-missing': { minStatus: 'scan_error', evidenceLevel: 'lock' },
-  'ambiguous-resolution': { minStatus: 'degraded', evidenceLevel: 'lock' },
-  'scan-infrastructure-error': { minStatus: 'scan_error', evidenceLevel: 'lock' },
-});
+import { FINDING_CODE_REGISTRY } from './finding-registry.js';
+
+export { FINDING_CODE_REGISTRY, isRegisteredFindingCode, precedenceRank, RULE_PRECEDENCE } from './finding-registry.js';
+import type { FindingCodeSpec as RegistryFindingCodeSpec } from './finding-registry.js';
+export type { FindingCodeSpec as RegistryFindingCodeSpec } from './finding-registry.js';
+
+export const C1_FINDING_CODES: Readonly<Record<string, FindingCodeSpec>> = Object.fromEntries(
+  Object.entries(FINDING_CODE_REGISTRY).filter((entry): entry is [string, RegistryFindingCodeSpec] => entry[1].owner === 'C1'),
+);
+
+/** Most severe state wins; unknown outranks green; validated outranks declared. */
+export function aggregateStatus(states: readonly CompatibilityState[]): CompatibilityState {
+  if (states.length === 0) return 'unknown';
+  let best = AGGREGATION_ORDER.length;
+  for (const state of states) {
+    const rank = AGGREGATION_ORDER.indexOf(state);
+    if (rank === -1) throw new Error(`unknown compatibility state: ${String(state)}`);
+    if (rank < best) best = rank;
+  }
+  return AGGREGATION_ORDER[best];
+}
 
 export interface ProfileManifest {
   readonly path: string;
@@ -129,6 +142,11 @@ export interface PluginReconcile {
   readonly loaderIds: readonly string[];
   readonly ambiguous: boolean;
   readonly reconcileCode: string | null;
+  /**
+   * Directories the package actually resolves to (C2 needs the installed
+   * files for manifest rules and API surface extraction; never a report field).
+   */
+  readonly packageDirs: readonly string[];
 }
 
 /**
@@ -256,6 +274,8 @@ export interface ProfileScan {
   readonly profile: ProfileIdentity;
   readonly plugins: readonly PluginInventory[];
   readonly findings: readonly ReportFinding[];
+  /** Every actual installed version per package name (peer resolution in C2). */
+  readonly actualVersionsByName: ReadonlyMap<string, readonly string[]>;
   readonly summary: { readonly status: CompatibilityState; readonly blocking: number; readonly review: number };
   readonly redact: Redactor;
 }

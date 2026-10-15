@@ -1,0 +1,15 @@
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      @nanmicoder/dsh-agent-teams:
+        specifier: 0.1.2
+        version: 0.1.2
+
+packages:
+  @nanmicoder/dsh-agent-teams@0.1.2:
+    resolution: {integrity: sha512-KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK}
+
+snapshots:
+  @nanmicoder/dsh-agent-teams@0.1.2: {}

@@ -104,8 +104,21 @@ for (const packageDir of packageDirs) {
   }
 }
 
-if (packageMetadata.core && Object.keys(packageMetadata.core.dependencies ?? {}).length > 0) {
-  fail('core must not depend on another workspace package');
+// Core may depend on pinned third-party libraries (C2: the battle-tested
+// semver implementation demanded by docs/01 section 8.3), never on workspace
+// packages — the doctor/plugin -> core direction below stays authoritative.
+const workspacePackageNames = new Set(
+  Object.values(packageMetadata)
+    .map((metadata) => metadata?.name)
+    .filter((name) => typeof name === 'string'),
+);
+if (packageMetadata.core) {
+  const workspaceDependency = Object.keys(packageMetadata.core.dependencies ?? {}).find((name) =>
+    workspacePackageNames.has(name),
+  );
+  if (workspaceDependency !== undefined) {
+    fail(`core must not depend on another workspace package: ${workspaceDependency}`);
+  }
 }
 for (const packageDir of ['cli', 'dsh-plugin']) {
   const metadata = packageMetadata[packageDir];

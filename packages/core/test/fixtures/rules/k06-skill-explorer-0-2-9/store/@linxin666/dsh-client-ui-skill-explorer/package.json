@@ -1,0 +1,7 @@
+{
+  "name": "@linxin666/dsh-client-ui-skill-explorer",
+  "version": "0.2.9",
+  "dsh": {
+    "engines": { "dsh": ">=0.1.1-rc.2" }
+  }
+}

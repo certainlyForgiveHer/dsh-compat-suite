@@ -1,0 +1,7 @@
+{
+  "name": "dsh-profile-k01-agent-teams-0-1-15",
+  "private": true,
+  "dependencies": {
+    "@nanmicoder/dsh-agent-teams": "0.1.15"
+  }
+}

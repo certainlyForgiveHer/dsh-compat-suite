@@ -112,7 +112,9 @@ dsh-compat-doctor scan --profile web --strict
 
 职责：发现当前宿主和 profile 的真实状态，执行离线静态规则，不访问 registry，不启动第二个 dsh。
 
-C1 实现状态（2026-09-11）：`scan` 的环境发现部分已实现——宿主身份解析、profile manifest、pnpm lock v9、node_modules 实际版本、三方 reconcile、路径脱敏与 `scan --json` 初版。离线静态规则判定属 C2，尚未实现，因此发现的插件状态恒为非绿色（`unknown`；有身份缺陷时为 `degraded` 或 `scan_error`）。证据见 [`evidence/c1-environment-discovery.md`](evidence/c1-environment-discovery.md)。
+C1 实现状态（2026-09-11）：`scan` 的环境发现部分已实现——宿主身份解析、profile manifest、pnpm lock v9、node_modules 实际版本、三方 reconcile、路径脱敏与 `scan --json` 初版。证据见 [`evidence/c1-environment-discovery.md`](evidence/c1-environment-discovery.md)。
+
+C2 实现状态（2026-10-15）：离线静态规则判定已叠加到 `scan`——engines/peer 范围规则、known matrix、API 表面检查与证据聚合见 [`evidence/c2-rule-engine.md`](evidence/c2-rule-engine.md)。无声明、无矩阵、无 API 证据的插件保持 `unknown`；`check-update` / `smoke` / `explain` 命令仍属 C3/C4/C5。
 
 `--profile` 接受 profile 名（解析为 `<dsh-home>/profiles/<name>`）或显式目录路径；`--dsh-bin` 未指定时从 `PATH` 解析 `dsh`。宿主不可解析时输出 `host-identity-unresolved`（scan_error，退出码 4），但**不丢失**插件身份。
 
@@ -290,6 +292,19 @@ manifest specifier ↔ lockfile resolved version ↔ node_modules actual version
 - 可选的最低 doctor 版本。
 
 本地规则优先于远程规则。MVP 不自动下载并信任远程矩阵；若未来增加更新，必须做签名验证、版本回滚保护和缓存审计。
+
+### 8.5 C2 实现状态（2026-10-15）
+
+规则引擎已随 C2 交付（证据见 [`evidence/c2-rule-engine.md`](evidence/c2-rule-engine.md)），实现语义在冻结契约之上补充如下：
+
+- **semver 评估层**：封装成熟 `semver` 包（精确锁定版本），严格解析、prerelease-aware 范围判断与规范排序；不可解析的版本或范围一律返回"不可判定"，由规则映射为 `rule-input-unparseable`（unknown）或跳过判定，绝不静默强转。空范围声明按"不可用输入"处理，不当作 `*`。
+- **prerelease 门槛**：采用 npm 标准语义（不开启 `includePrerelease`）——prerelease 宿主版本仅在范围含同 `major.minor.patch` 元组的 prerelease 比较器时命中。生态中插件以"精确版本 OR 列表"或 prerelease 下界表达兼容区间，与本语义一致。此为保守方向：绿色需要正向证据。
+- **域声明读取**：`dsh.engines.dsh` 与 `peerDependencies`(+`peerDependenciesMeta.optional`) 读取自插件实际安装目录；mandatory peer 的版本解析来源为宿主核心包与 profile 实际安装，无任何可核对版本时产生 `peer-resolution-missing`（unknown）；optional peer 缺失不是 mismatch，已安装但不匹配产生 `peer-mismatch-optional`（unknown，不单独阻断）。
+- **known matrix**：内置版本化 JSON（`packages/core/data/known-matrix-v1.json`），v1 数据仅含 `allow`/`deny`；`deny` 不因过期转为绿色，**allow 过期降级为 unknown**；矩阵文件损坏时退回纯 manifest 判定并在证据中记录；`minDoctorVersion` 过滤不满足的条目。K01（AgentTeams 0.1.15 × 0.1.1-rc.2 deny）与 K02（AgentTeams 0.1.2 静态基线 allow）已内置。
+- **API 表面**：宿主语料（运行时代码与 `.d.ts`，跳过内联文件与 `node_modules`/点目录）+ 插件 `ctx.<service>.<method>` 静态提取；文件数、单文件与总字节限额，超限或跳过 minified 文件时语料不可信，只产生 `analysis-incomplete`（unknown），不产生 `missing-host-api`。语料存在的方法名不能反向证明兼容（位置匹配留给 runtime/smoke 证据）。
+- **`explain` 数据层**：`explainFinding`/`listFindingCodes` 输出注册表行、优先级位与同 subject 相关结论；CLI 命令仍属 C5。
+
+v1 注册表新增两个 additive code：`rule-input-unparseable`、`peer-resolution-missing`（issue #14 scope_revision 2 追加，不改变任何既有语义）。
 
 ## 9. API 表面检查
 
