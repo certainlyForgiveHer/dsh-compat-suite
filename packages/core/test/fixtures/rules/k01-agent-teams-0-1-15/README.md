@@ -1,7 +1,7 @@
 # k01-agent-teams-0-1-15
 
 ## 输入
-宿主 0.1.1-rc.2 + @nanmicoder/dsh-agent-teams 0.1.15（无 engines/peers 声明）；bundle dist/index.js 调用 ctx.subagents.registerContinuableSetup；宿主语料（host-corpus）无该方法；内置矩阵含 deny 记录。
+宿主 0.1.1-rc.2 + @nanmicoder/dsh-agent-teams 0.1.15（无 engines/peers 声明）；bundle bundle/index.js 调用 ctx.subagents.registerContinuableSetup；宿主语料（host-corpus）无该方法；内置矩阵含 deny 记录。
 
 ## 预期 findings
 known-matrix-deny（known_matrix 证据）+ missing-host-api（host_api 证据）；无引擎声明被矩阵 deny 抑制。
