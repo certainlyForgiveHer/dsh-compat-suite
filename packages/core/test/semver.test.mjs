@@ -130,6 +130,15 @@ test('sortVersions orders parseable versions ascending and keeps garbage stable 
   assert.deepEqual(sortVersions([]), []);
 });
 
+
+test('non-string inputs are rejected before any spec logic runs', () => {
+  assert.equal(parseVersion(42), null);
+  assert.equal(compareVersions('1.0.0', 42), null);
+  assert.equal(satisfiesRange('1.0.0', 42), null);
+  assert.equal(isValidRange(42), false);
+  assert.equal(isStandardVersion(42), false);
+});
+
 // ------------------------------------------------------------ property checks
 // Deterministic seeded generator; the oracle is the mathematical property of
 // the comparison function itself (antisymmetry, transitivity, totality), not a

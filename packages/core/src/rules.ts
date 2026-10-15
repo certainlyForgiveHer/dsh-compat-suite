@@ -310,11 +310,9 @@ export function evaluateRules(
   for (const plugin of scan.plugins) {
     if (!isPackageName(plugin.name)) continue;
     const manifest = readPluginManifestRules(plugin.packageDirs);
-    if (manifest.manifestError !== null) {
-      // Identity evidence failed for this package; C1 findings already speak.
-      statusByPlugin.set(plugin.name, aggregateStatus([]));
-      continue;
-    }
+    // An unreadable manifest suspends only the declaration rules: the matrix
+    // and the installed-code API check judge on their own evidence.
+    const manifestUsable = manifest.manifestError === null;
     const pluginFindings: ReportFinding[] = [];
     const emit = (rule: RuleFindingInput): void => {
       pluginFindings.push(materializeRuleFinding(rule, redact));
@@ -364,18 +362,11 @@ export function evaluateRules(
       });
     }
 
-    if (hostVersion !== null) {
+    if (manifestUsable && hostVersion !== null) {
+      const unusableDeclarations: string[] = [];
       if (manifest.enginesDsh !== null) {
         if (!isValidRange(manifest.enginesDsh)) {
-          emit({
-            code: 'rule-input-unparseable',
-            subject: plugin.name,
-            observed: `dsh.engines.dsh = '${manifest.enginesDsh}' 无法解析为有效 semver 范围`,
-            expected: 'dsh.engines.dsh 是可解析的 semver 范围',
-            evidence: [{ type: 'manifest', source, detail: '不可解析的声明不产生任何方向性结论' }],
-            nextStep: '修正插件 manifest 的 dsh.engines.dsh 声明后重新扫描',
-            blocking: false,
-          });
+          unusableDeclarations.push(`dsh.engines.dsh='${manifest.enginesDsh}'`);
         } else {
           const match = satisfiesRange(hostVersion, manifest.enginesDsh);
           if (match === true) {
@@ -402,56 +393,103 @@ export function evaluateRules(
         }
       }
 
+      // Peer rules aggregate into one finding per (subject, code): finding IDs
+      // are <subject>:<code>, so several peers in the same bucket share one
+      // finding with ordered per-peer evidence (docs/07 section 4).
+      const unparseablePeers: PeerDeclaration[] = [];
+      const unresolvedMandatory: PeerDeclaration[] = [];
+      const mismatchedOptional: { readonly peer: PeerDeclaration; readonly installed: readonly string[] }[] = [];
+      const mismatchedMandatory: { readonly peer: PeerDeclaration; readonly installed: readonly string[] }[] = [];
       for (const peer of manifest.peers) {
         const installed = resolvePeerVersions(peer.name, host, scan.actualVersionsByName);
         if (!isValidRange(peer.range)) {
-          emit({
-            code: 'rule-input-unparseable',
-            subject: plugin.name,
-            observed: `peer ${peer.name} 的范围 '${peer.range}' 无法解析`,
-            expected: 'peerDependencies 中的范围是可解析的 semver 范围',
-            evidence: [{ type: 'manifest', source, detail: `peer ${peer.name}（${peer.optional ? 'optional' : 'mandatory'}）` }],
-            nextStep: '修正插件 manifest 的 peerDependencies 声明后重新扫描',
-            blocking: false,
-          });
+          unparseablePeers.push(peer);
           continue;
         }
         if (installed.length === 0) {
-          if (!peer.optional) {
-            emit({
-              code: 'peer-resolution-missing',
-              subject: plugin.name,
-              observed: `mandatory peer ${peer.name} 未能在宿主核心包或 profile 实际安装中解析出版本`,
-              expected: '声明的 mandatory peer 存在可核对的安装版本',
-              evidence: [{ type: 'manifest', source, detail: `peer ${peer.name} '${peer.range}'；无可核对版本` }],
-              nextStep: '重新安装依赖（含 peer）后重新扫描',
-              blocking: false,
-            });
-          }
+          if (!peer.optional) unresolvedMandatory.push(peer);
           continue;
         }
         if (installed.some((version) => satisfiesRange(version, peer.range) === true)) continue;
-        if (peer.optional) {
-          emit({
-            code: 'peer-mismatch-optional',
-            subject: plugin.name,
-            observed: `optional peer ${peer.name} '${peer.range}' 不匹配实际安装 ${installed.join(', ')}`,
-            expected: 'optional peer 范围匹配（不匹配仅记录，不单独阻断）',
-            evidence: [{ type: 'manifest', source, detail: `peer ${peer.name}（optional）'${peer.range}'` }],
-            nextStep: '复核 optional peer 范围与实际安装版本',
-            blocking: false,
-          });
-        } else {
-          emit({
-            code: 'peer-mismatch-mandatory',
-            subject: plugin.name,
-            observed: `mandatory peer ${peer.name} '${peer.range}' 不匹配实际安装 ${installed.join(', ')}`,
-            expected: 'mandatory peer 范围覆盖实际安装版本',
-            evidence: [{ type: 'manifest', source, detail: `peer ${peer.name}（mandatory）'${peer.range}'` }],
-            nextStep: '更换插件版本或安装满足范围的 peer 依赖后重新扫描',
-            blocking: true,
-          });
-        }
+        if (peer.optional) mismatchedOptional.push({ peer, installed });
+        else mismatchedMandatory.push({ peer, installed });
+      }
+
+      if (unparseablePeers.length > 0) {
+        emit({
+          code: 'rule-input-unparseable',
+          subject: plugin.name,
+          observed: `peer 范围声明无法解析：${unparseablePeers.map((peer) => `${peer.name}='${peer.range}'（${peer.optional ? 'optional' : 'mandatory'}）`).join('；')}`,
+          expected: 'peerDependencies 中的范围是可解析的 semver 范围',
+          evidence: unparseablePeers.map((peer) => ({
+            type: 'manifest' as const,
+            source,
+            detail: `peer ${peer.name}（${peer.optional ? 'optional' : 'mandatory'}）'${peer.range}'`,
+          })),
+          nextStep: '修正插件 manifest 的 peerDependencies 声明后重新扫描',
+          blocking: false,
+        });
+      }
+      if (unresolvedMandatory.length > 0) {
+        emit({
+          code: 'peer-resolution-missing',
+          subject: plugin.name,
+          observed: `mandatory peer 未能在宿主核心包或 profile 实际安装中解析出版本：${unresolvedMandatory.map((peer) => peer.name).join('；')}`,
+          expected: '声明的 mandatory peer 存在可核对的安装版本',
+          evidence: unresolvedMandatory.map((peer) => ({
+            type: 'manifest' as const,
+            source,
+            detail: `peer ${peer.name} '${peer.range}'；无可核对版本`,
+          })),
+          nextStep: '重新安装依赖（含 peer）后重新扫描',
+          blocking: false,
+        });
+      }
+      if (mismatchedMandatory.length > 0) {
+        emit({
+          code: 'peer-mismatch-mandatory',
+          subject: plugin.name,
+          observed: `mandatory peer 范围不匹配实际安装：${mismatchedMandatory.map(({ peer, installed }) => `${peer.name} '${peer.range}' → ${installed.join(', ')}`).join('；')}`,
+          expected: 'mandatory peer 范围覆盖实际安装版本',
+          evidence: mismatchedMandatory.map(({ peer, installed }) => ({
+            type: 'manifest' as const,
+            source,
+            detail: `peer ${peer.name}（mandatory）'${peer.range}'；实际 ${installed.join(', ')}`,
+          })),
+          nextStep: '更换插件版本或安装满足范围的 peer 依赖后重新扫描',
+          blocking: true,
+        });
+      }
+      if (mismatchedOptional.length > 0) {
+        emit({
+          code: 'peer-mismatch-optional',
+          subject: plugin.name,
+          observed: `optional peer 范围不匹配实际安装（仅记录，不单独阻断）：${mismatchedOptional.map(({ peer, installed }) => `${peer.name} '${peer.range}' → ${installed.join(', ')}`).join('；')}`,
+          expected: 'optional peer 范围匹配',
+          evidence: mismatchedOptional.map(({ peer, installed }) => ({
+            type: 'manifest' as const,
+            source,
+            detail: `peer ${peer.name}（optional）'${peer.range}'；实际 ${installed.join(', ')}`,
+          })),
+          nextStep: '复核 optional peer 范围与实际安装版本',
+          blocking: false,
+        });
+      }
+
+      if (unusableDeclarations.length > 0) {
+        emit({
+          code: 'rule-input-unparseable',
+          subject: plugin.name,
+          observed: `规则输入声明无法解析为有效 semver（不产生任何方向性结论）：${unusableDeclarations.join('；')}`,
+          expected: 'dsh.engines.dsh 与 peerDependencies 的范围均为可解析的 semver 范围',
+          evidence: unusableDeclarations.map((declaration) => ({
+            type: 'manifest' as const,
+            source,
+            detail: declaration,
+          })),
+          nextStep: '修正插件 manifest 的声明后重新扫描',
+          blocking: false,
+        });
       }
     }
 
@@ -490,7 +528,13 @@ export function evaluateRules(
 
     // Manifest-level information gap. Suppressed when the matrix already
     // produced a decidable conclusion (its semantics: "且无其他可判证据").
-    if (!manifest.enginesDshPresent && manifest.unparseableInputs.length === 0 && usableMatches.length === 0 && hostVersion !== null) {
+    if (
+      manifestUsable &&
+      !manifest.enginesDshPresent &&
+      manifest.unparseableInputs.length === 0 &&
+      usableMatches.length === 0 &&
+      hostVersion !== null
+    ) {
       const peerNames = manifest.peers.map((peer) => peer.name);
       emit({
         code: 'engine-declaration-missing',

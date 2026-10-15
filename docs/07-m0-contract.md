@@ -92,6 +92,8 @@
 | smoke-blocked | 需要凭据或外部服务才能启动 | unknown | runtime |
 | degraded-runtime-errors | 启动后持续错误或健康探针失败 | degraded | runtime |
 | scan-infrastructure-error | 扫描基础设施失败 | scan_error | lock |
+| rule-input-unparseable | 声明的规则输入（engines/peer 范围）无法解析为有效 semver，规则无法判定 | unknown | manifest |
+| peer-resolution-missing | 声明的 mandatory peer 无法在宿主核心包或 profile 实际安装中解析出可核对版本 | unknown | manifest |
 
 示例：
 

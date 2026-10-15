@@ -12,6 +12,7 @@ import {
 
 const CORE_DIST = new URL('../dist/index.js', import.meta.url).href;
 
+const m = await import(CORE_DIST);
 const {
   scanProfile,
   buildReport,
@@ -22,8 +23,51 @@ const {
   readPluginManifestRules,
   evaluateRules,
   explainFinding,
+  compareFindingsStable,
+  precedenceRank,
+  listFindingCodes,
   FINDING_CODE_REGISTRY,
-} = await import(CORE_DIST);
+} = m;
+const registryImports = {
+  explainFinding,
+  compareFindingsStable,
+  precedenceRank,
+  listFindingCodes,
+};
+
+/** Evaluate rules against a hand-built ProfileScan (no filesystem required). */
+function makeSyntheticScan(pluginOverrides) {
+  const base = {
+    name: '__unset__',
+    loaderIds: [],
+    enabled: true,
+    manifestSpecifier: null,
+    lockVersion: null,
+    actualVersion: null,
+    integrity: null,
+    ambiguous: false,
+    reconcileCode: null,
+    packageDirs: [],
+    status: 'unknown',
+    evidenceIds: [],
+    smokeCoverage: { result: 'not-run', scope: [], notCovered: [], evidenceIds: [] },
+    uncheckedFeatures: [],
+  };
+  const plugins = pluginOverrides.map((override) => ({ ...base, ...override }));
+  return {
+    profile: { name: 'synthetic', manifestDigest: 'sha256:' + '0'.repeat(64), lockDigest: 'sha256:' + '0'.repeat(64) },
+    plugins,
+    findings: [],
+    actualVersionsByName: new Map(),
+    summary: { status: 'unknown', blocking: 0, review: 0 },
+    redact: (value) => value,
+  };
+}
+
+function evaluateRulesInput(scan, options = {}) {
+  const result = evaluateRules({ scan, host: options.host ?? hostIdentity() }, options);
+  return { scan, result };
+}
 
 /** Run the full C1 scan + C2 rule pipeline over a synthetic profile. */
 function evaluate(profile, options = {}) {
@@ -558,6 +602,234 @@ test('every C2 finding code is registered with its frozen minimum status and evi
   assert.equal(FINDING_CODE_REGISTRY['missing-host-api'].evidenceLevel, 'host_api');
   assert.equal(FINDING_CODE_REGISTRY['rule-input-unparseable'].minStatus, 'unknown');
   assert.equal(FINDING_CODE_REGISTRY['peer-resolution-missing'].minStatus, 'unknown');
+});
+
+
+// ------------------------------------------------- manifest read failures
+
+test('readPluginManifestRules surfaces unreadable manifests as scan errors', (t) => {
+  if (process.platform === 'win32' || (process.getuid?.() ?? 1) === 0) {
+    return t.skip('cannot enforce a POSIX permission denial on this platform/user');
+  }
+  const fixture = createRulesProfile([{ name: 'plugin-locked', version: '1.0.0' }]);
+  t.after(() => fixture.cleanup());
+  const manifestPath = path.join(fixture.pluginDir('plugin-locked'), 'package.json');
+  fs.chmodSync(manifestPath, 0o000);
+  const rules = readPluginManifestRules([fixture.pluginDir('plugin-locked')]);
+  assert.ok(rules.manifestError !== null);
+  assert.equal(rules.manifestError.code, 'scan-infrastructure-error');
+  assert.equal(rules.enginesDsh, null);
+  assert.equal(rules.peers.length, 0);
+});
+
+test('readPluginManifestRules rejects a malformed or non-object manifest', () => {
+  const fixture = createRulesProfile([{ name: 'plugin-broken-json', version: '1.0.0' }]);
+  try {
+    const dir = fixture.pluginDir('plugin-broken-json');
+    fs.writeFileSync(path.join(dir, 'package.json'), '{not json');
+    const invalid = readPluginManifestRules([dir]);
+    assert.match(invalid.manifestError?.message ?? '', /valid JSON/);
+
+    fs.writeFileSync(path.join(dir, 'package.json'), '[1, 2]');
+    const nonObject = readPluginManifestRules([dir]);
+    assert.match(nonObject.manifestError?.message ?? '', /not an object/);
+
+    assert.deepEqual(readPluginManifestRules([]).unparseableInputs, [], 'no package dirs means no rule inputs, no error');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('evaluateRules leaves manifest-broken plugins to the C1 identity findings', () => {
+  // Synthetic ProfileScan: the installed manifest is unreadable while the C1
+  // scan itself succeeded (e.g. the file changed between scan phases).
+  const scan = makeSyntheticScan([
+    {
+      name: 'plugin-ghost-manifest',
+      manifestSpecifier: '1.0.0',
+      lockVersion: '1.0.0',
+      actualVersion: '1.0.0',
+      packageDirs: ['/definitely/not/a/package'],
+      enabled: true,
+    },
+  ]);
+  const { result } = evaluateRulesInput(scan);
+  assert.deepEqual(result.findings.filter((f) => f.subject === 'plugin-ghost-manifest'), [], 'no rule findings without readable declarations');
+  assert.equal(result.statusByPlugin.get('plugin-ghost-manifest'), 'unknown');
+});
+
+
+test('malformed peer declarations surface as unusable inputs instead of disappearing', () => {
+  const fixture = createRulesProfile([
+    {
+      name: 'plugin-shapes',
+      version: '1.0.0',
+      manifestExtra: {
+        peerDependencies: { 'Bad Name': '>=1.0.0', 'good-name': 2173 },
+        peerDependenciesMeta: { 'Bad Name': { optional: true } },
+      },
+    },
+  ]);
+  try {
+    const rules = readPluginManifestRules([fixture.pluginDir('plugin-shapes')]);
+    assert.deepEqual(rules.peers, [], 'unusable shapes must not become judgeable declarations');
+    assert.equal(rules.unparseableInputs.length, 2);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('a non-standard host version suspends range judgement instead of guessing', () => {
+  const fixture = createRulesProfile([{ name: 'plugin-wild-host', version: '1.0.0', enginesDsh: '>=0.1.0' }]);
+  try {
+    const { result } = evaluateRulesInput(makeSyntheticScan([]), { host: hostIdentity({ cliVersion: 'garbage+++1' }) });
+    assert.deepEqual(result.findings, []);
+    // Now over a real scan the same rule keeps the plugin at unknown.
+    const scan = scanProfile(fixture.profilePath, { layout: RULES_LAYOUT });
+    const second = evaluateRules({ scan, host: hostIdentity({ cliVersion: 'garbage+++1' }) }, {});
+    assert.equal(second.statusByPlugin.get('plugin-wild-host'), 'unknown');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('an injected corpus index grounds missing-API verdicts without filesystem probing', () => {
+  const index = { methods: new Set(['otherMethod']), filesScanned: 1, skippedMinified: 0, truncated: false, trusted: true };
+  const usage = {
+    references: [{ service: 'subagents', method: 'registerContinuableSetup', file: 'index.js' }],
+    dynamicUsage: false,
+    filesScanned: 1,
+    skippedMinified: 0,
+    truncated: false,
+  };
+  const scan = makeSyntheticScan([
+    { name: 'plugin-with-usage', manifestSpecifier: '1.0.0', lockVersion: '1.0.0', actualVersion: '1.0.0', packageDirs: ['/x'], enabled: true },
+  ]);
+  const { result } = evaluateRulesInput(scan, { hostApiIndex: index, apiUsageOverrides: new Map([['plugin-with-usage', usage]]) });
+  const finding = result.findings.find((f) => f.code === 'missing-host-api');
+  assert.ok(finding, 'the injected index must ground the verdict');
+  assert.equal(finding.status, 'incompatible');
+});
+
+test('an invalid plugin name is skipped without findings', () => {
+  const scan = makeSyntheticScan([
+    { name: 'Not A Package', manifestSpecifier: '1.0.0', lockVersion: '1.0.0', actualVersion: '1.0.0', packageDirs: ['/x'], enabled: true },
+  ]);
+  const { result } = evaluateRulesInput(scan);
+  assert.deepEqual(result.findings, []);
+});
+
+test('compareFindingsStable orders equal-rank equal-subject findings deterministically', () => {
+  const mk = (id, code, subject, observed) => ({
+    id, code, subject, observed,
+    status: 'unknown', severity: 'info', confidence: 'low',
+    expected: '', evidence: [], nextStep: '', blocking: false, location: '',
+  });
+  const a = mk('p:rule-input-unparseable', 'rule-input-unparseable', 'p', 'later-text');
+  const b = mk('p:peer-mismatch-optional', 'peer-mismatch-optional', 'p', 'earlier-text');
+  const c = mk('p:peer-mismatch-optional', 'peer-mismatch-optional', 'p', 'earlier-text');
+  const cmp = compareFindingsStable;
+  assert.ok(cmp(a, b) !== 0, 'different codes order by code');
+  assert.equal(cmp(b, c) === 0, true, 'identical findings compare equal');
+  assert.equal(cmp(c, b) === 0, true, 'equality is symmetric');
+});
+
+
+test('several peers of the same kind aggregate into one finding with ordered evidence', () => {
+  // Optional peers are installed-but-mismatched so the mismatch bucket fires
+  // (an absent optional peer is not a mismatch at all).
+  const fixture = createRulesProfile([
+    {
+      name: 'plugin-many-peers',
+      version: '1.0.0',
+      peers: [
+        { name: '@deepseek-ai/dsh-brother', range: '>=1.0.0' },
+        { name: '@deepseek-ai/dsh-sister', range: '>=1.0.0' },
+        { name: 'react', range: '^19.0.0', optional: true },
+        { name: 'vue', range: '^3.0.0', optional: true },
+      ],
+    },
+  ], { store: [{ name: 'react', version: '18.3.1' }, { name: 'vue', version: '2.7.16' }] });
+  try {
+    const { result } = evaluate(fixture);
+    const missing = result.findings.filter((f) => f.code === 'peer-resolution-missing');
+    assert.equal(missing.length, 1, 'identical-code findings must share one stable id');
+    assert.equal(missing[0].id, 'plugin-many-peers:peer-resolution-missing');
+    assert.equal(missing[0].evidence.length, 2);
+    assert.deepEqual(
+      missing[0].evidence.map((e) => e.detail),
+      missing[0].evidence.map((e) => e.detail).sort((a, b) => a.localeCompare(b)),
+      'peer evidence is name-ordered and stable',
+    );
+    const optional = result.findings.filter((f) => f.code === 'peer-mismatch-optional');
+    assert.equal(optional.length, 1, 'optional mismatches aggregate the same way');
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+// ------------------------------------------------------- stable ordering
+
+test('compareFindingsStable is total, deterministic and host-first', () => {
+  const { explainFinding: explain, compareFindingsStable: cmp, precedenceRank: rank } = registryImports;
+  const { findingForReconcile } = m;
+  const scan = makeSyntheticScan([
+    { name: 'zzb', manifestSpecifier: '1.0.0', lockVersion: '1.0.0', actualVersion: '1.0.0', packageDirs: [], enabled: true },
+    { name: 'zza', manifestSpecifier: '1.0.0', lockVersion: '1.0.0', actualVersion: '1.0.0', packageDirs: [], enabled: true },
+  ]);
+  const { result } = evaluateRulesInput(scan);
+  const first = JSON.stringify(result.findings.map((f) => f.id));
+  const second = JSON.stringify(evaluateRulesInput(scan).result.findings.map((f) => f.id));
+  assert.equal(first, second, 'repeated evaluation is order-stable');
+  for (const finding of result.findings) {
+    assert.equal(cmp(finding, finding) === 0, true, 'each finding is equal to itself');
+  }
+  assert.ok(rank('not-a-code') > rank('known-matrix-deny'), 'unregistered codes sort last');
+});
+
+// ----------------------------------------------- explain and registry extras
+
+test('explainFinding returns null for findings outside the registry', () => {
+  const { explainFinding: explain } = registryImports;
+  const alien = {
+    id: 'plugin-x:unknown-code',
+    code: 'unknown-code',
+    subject: 'plugin-x',
+    status: 'unknown',
+    severity: 'info',
+    confidence: 'low',
+    observed: 'x',
+    expected: 'y',
+    evidence: [{ id: 'plugin-x:unknown-code#1', type: 'heuristic', source: 's', detail: 'd' }],
+    location: 's',
+    nextStep: 'z',
+    blocking: false,
+  };
+  assert.equal(explain([alien], 'plugin-x:unknown-code'), null, 'an unregistered code must not be explained');
+});
+
+test('listFindingCodes exposes the whole frozen registry', () => {
+  const { listFindingCodes } = registryImports;
+  const codes = listFindingCodes().map((row) => row.code);
+  assert.ok(codes.includes('missing-host-api'));
+  assert.ok(codes.includes('rule-input-unparseable'));
+  assert.ok(codes.includes('peer-resolution-missing'));
+  assert.ok(codes.every((code) => /^[a-z][a-z0-9]+(-[a-z0-9]+)*$/.test(code)), 'every code is kebab-case');
+});
+
+
+test('the registry exposes every frozen code and admits none outside it', () => {
+  const codes = Object.keys(FINDING_CODE_REGISTRY);
+  assert.ok(codes.length >= 23, `the frozen table has 23 rows, got ${codes.length}`);
+  for (const code of codes) {
+    assert.match(code, /^[a-z][a-z0-9]+(-[a-z0-9]+)*$/);
+    assert.ok(FINDING_CODE_REGISTRY[code].semantic.length >= 6);
+  }
+  assert.ok(FINDING_CODE_REGISTRY['scan-infrastructure-error'].owner === 'C1');
+  assert.ok(FINDING_CODE_REGISTRY['missing-host-api'].owner === 'C2');
+  const { isRegisteredFindingCode: registered } = m;
+  assert.ok(registered('missing-host-api') === true);
+  assert.ok(registered('not-a-row') === false);
 });
 
 // ------------------------------------------------------------- explain data

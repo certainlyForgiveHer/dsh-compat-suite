@@ -15,11 +15,20 @@
  */
 
 import {
-  compare as semverCompare,
+  compare as semverCompareRaw,
   parse as semverParse,
   satisfies as semverSatisfies,
   validRange as semverValidRange,
 } from 'semver';
+
+/**
+ * Ordered comparison with the defensive branch removed at the type level: the
+ * `semver.compare` signature allows null for unparseable input, but every
+ * internal caller has parsed both operands first, so the null arm cannot run.
+ */
+function compareSpec(a: string, b: string): number {
+  return semverCompareRaw(a, b) as number;
+}
 
 export interface ParsedVersion {
   readonly version: string;
@@ -66,7 +75,7 @@ export function satisfiesRange(version: string | null, range: string): boolean |
  */
 export function compareVersions(left: string, right: string): number | null {
   if (parseVersion(left) === null || parseVersion(right) === null) return null;
-  const diff = semverCompare(left, right);
+  const diff = semverCompareRaw(left, right);
   return diff === 0 ? 0 : diff; // normalize semver's -0 to 0 for stable equality
 }
 
@@ -77,9 +86,7 @@ export function compareVersions(left: string, right: string): number | null {
 export function maxVersion(versions: readonly string[]): string | null {
   const parseable = versions.filter((version) => parseVersion(version) !== null);
   if (parseable.length === 0) return null;
-  return parseable.reduce((best, current) =>
-    (semverCompare(current, best) ?? 0) > 0 ? current : best,
-  );
+  return parseable.reduce((best, current) => (compareSpec(current, best) > 0 ? current : best));
 }
 
 /**
@@ -89,7 +96,7 @@ export function maxVersion(versions: readonly string[]): string | null {
  */
 export function sortVersions(versions: readonly string[]): readonly string[] {
   const parseable = versions.filter((version) => parseVersion(version) !== null);
-  parseable.sort((left, right) => semverCompare(left, right) ?? 0);
+  parseable.sort(compareSpec);
   const unparseable = versions.filter((version) => parseVersion(version) === null);
   return [...parseable, ...unparseable];
 }

@@ -42,10 +42,13 @@ export interface HostApiIndex {
   readonly methods: ReadonlySet<string>;
   readonly filesScanned: number;
   readonly skippedMinified: number;
+  /** Files that existed but could not be read (permission, vanished mid-walk). */
+  readonly unreadable: number;
   readonly truncated: boolean;
   /**
    * Whether the index may ground a `missing-host-api` claim. An index that hit
-   * a limit or skipped minified files cannot prove absence of an API.
+   * a limit, skipped minified files or could not read a file cannot prove
+   * absence of an API.
    */
   readonly trusted: boolean;
 }
@@ -61,6 +64,7 @@ export interface PluginApiUsage {
   readonly dynamicUsage: boolean;
   readonly filesScanned: number;
   readonly skippedMinified: number;
+  readonly unreadable: number;
   readonly truncated: boolean;
 }
 
@@ -179,6 +183,7 @@ export function buildHostApiIndex(
   const methods = new Set<string>();
   let filesScanned = 0;
   let skippedMinified = 0;
+  let unreadable = 0;
   let truncated = false;
 
   for (const directory of directories) {
@@ -189,6 +194,7 @@ export function buildHostApiIndex(
       try {
         content = fs.readFileSync(file, 'utf8');
       } catch {
+        unreadable += 1;
         continue;
       }
       if (looksMinified(content)) {
@@ -204,8 +210,9 @@ export function buildHostApiIndex(
     methods,
     filesScanned,
     skippedMinified,
+    unreadable,
     truncated,
-    trusted: !truncated && skippedMinified === 0,
+    trusted: !truncated && skippedMinified === 0 && unreadable === 0,
   };
 }
 
@@ -223,6 +230,7 @@ export function extractPluginApiUsage(
   let dynamicUsage = false;
   let filesScanned = 0;
   let skippedMinified = 0;
+  let unreadable = 0;
   let truncated = false;
 
   for (const directory of directories) {
@@ -233,6 +241,7 @@ export function extractPluginApiUsage(
       try {
         content = fs.readFileSync(file, 'utf8');
       } catch {
+        unreadable += 1;
         continue;
       }
       if (looksMinified(content)) {
@@ -256,7 +265,7 @@ export function extractPluginApiUsage(
       ? left.method.localeCompare(right.method)
       : left.service.localeCompare(right.service),
   );
-  return { references, dynamicUsage, filesScanned, skippedMinified, truncated };
+  return { references, dynamicUsage, filesScanned, skippedMinified, unreadable, truncated };
 }
 
 /**
