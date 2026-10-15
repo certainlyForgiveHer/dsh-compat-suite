@@ -1,0 +1,7 @@
+{
+  "name": "dsh-profile-k06-skill-explorer-0-2-9",
+  "private": true,
+  "dependencies": {
+    "@linxin666/dsh-client-ui-skill-explorer": "0.2.9"
+  }
+}

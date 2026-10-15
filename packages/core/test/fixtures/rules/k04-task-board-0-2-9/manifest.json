@@ -1,0 +1,7 @@
+{
+  "name": "dsh-profile-k04-task-board-0-2-9",
+  "private": true,
+  "dependencies": {
+    "@linxin666/dsh-client-ui-task-board": "0.2.9"
+  }
+}

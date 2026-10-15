@@ -1,0 +1,7 @@
+{
+  "name": "@linxin666/dsh-client-ui-skill-explorer",
+  "version": "0.3.10",
+  "peerDependencies": {
+    "@deepseek-ai/dsh": ">=0.2.0-rc.2"
+  }
+}
