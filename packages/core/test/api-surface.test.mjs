@@ -164,7 +164,7 @@ test('a referenced method absent from the host corpus is a missing host API', ()
     const usage = {
       references: [
         { service: 'subagents', method: 'registerContinuableSetup', file: 'dist/index.js' },
-        { service: 'sessions', method: 'list', file: 'dist/index.js' },
+        { service: 'subagents', method: 'listSessions', file: 'dist/index.js' },
       ],
       dynamicUsage: false,
       filesScanned: 1,

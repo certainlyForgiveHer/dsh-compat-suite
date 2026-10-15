@@ -65,7 +65,7 @@ test('readPluginManifestRules extracts dsh.engines.dsh and peer declarations', (
       { name: '@deepseek-ai/dsh-subagent', range: '>=0.1.0', optional: false },
       { name: 'react', range: '^18.0.0', optional: true },
     ]);
-    assert.equal(rules.error, null);
+    assert.equal(rules.manifestError, null);
   } finally {
     fixture.cleanup();
   }
@@ -174,7 +174,7 @@ test('mandatory peer mismatch produces incompatible', () => {
 
 test('a satisfied mandatory peer produces no peer finding on its own', () => {
   const fixture = createRulesProfile([
-    { name: 'plugin-peer-ok', version: '1.0.0', enginesDsh: '>=0.1.1-rc.1', peers: [{ name: '@deepseek-ai/dsh-subagent', range: '>=0.1.0' }] },
+    { name: 'plugin-peer-ok', version: '1.0.0', enginesDsh: '>=0.1.1-rc.1', peers: [{ name: '@deepseek-ai/dsh-subagent', range: '>=0.1.1-rc.1' }] },
   ]);
   try {
     const { result } = evaluate(fixture);
@@ -194,26 +194,31 @@ test('an unresolvable mandatory peer yields peer-resolution-missing (unknown), n
   try {
     const { result } = evaluate(fixture);
     assert.equal(statusesFor(result)['plugin-peer-ghost'], 'unknown');
-    const finding = result.findings.find((f) => f.subject === 'plugin-peer-ghost');
-    assert.equal(finding.code, 'peer-resolution-missing');
+    const finding = result.findings.find((f) => f.subject === 'plugin-peer-ghost' && f.code === 'peer-resolution-missing');
+    assert.ok(finding, 'peer-resolution-missing expected');
   } finally {
     fixture.cleanup();
   }
 });
 
 test('optional peer mismatch is recorded without blocking and holds the plugin at unknown', () => {
-  const fixture = createRulesProfile([
-    {
-      name: 'plugin-opt-peer',
-      version: '1.0.0',
-      enginesDsh: '>=0.1.1-rc.1',
-      peers: [{ name: 'react', range: '^19.0.0', optional: true }],
-    },
-  ]);
+  const fixture = createRulesProfile(
+    [
+      {
+        name: 'plugin-opt-peer',
+        version: '1.0.0',
+        enginesDsh: '>=0.1.1-rc.1',
+        peers: [{ name: 'react', range: '^19.0.0', optional: true }],
+      },
+    ],
+    // The optional peer must be present-but-mismatched; an absent optional
+    // peer is not a mismatch at all.
+    { store: [{ name: 'react', version: '18.3.1' }] },
+  );
   try {
     const { result } = evaluate(fixture);
-    const finding = result.findings.find((f) => f.subject === 'plugin-opt-peer');
-    assert.equal(finding.code, 'peer-mismatch-optional');
+    const finding = result.findings.find((f) => f.subject === 'plugin-opt-peer' && f.code === 'peer-mismatch-optional');
+    assert.ok(finding, 'peer-mismatch-optional expected');
     assert.equal(finding.status, 'unknown');
     assert.equal(finding.blocking, false, 'optional peer mismatch must not block by itself');
     assert.equal(statusesFor(result)['plugin-opt-peer'], 'unknown', 'unknown outranks green');
@@ -228,8 +233,8 @@ test('an unparseable mandatory peer range yields rule-input-unparseable', () => 
   ]);
   try {
     const { result } = evaluate(fixture);
-    const finding = result.findings.find((f) => f.subject === 'plugin-peer-garbage');
-    assert.equal(finding.code, 'rule-input-unparseable');
+    const finding = result.findings.find((f) => f.subject === 'plugin-peer-garbage' && f.code === 'rule-input-unparseable');
+    assert.ok(finding, 'rule-input-unparseable expected');
     assert.equal(finding.status, 'unknown');
   } finally {
     fixture.cleanup();
@@ -269,7 +274,8 @@ test('unavailable API corpus with existing references degrades to analysis-incom
   ]);
   try {
     const { result } = evaluate(fixture, { hostApiDirs: [] });
-    const finding = result.findings.find((f) => f.subject === 'plugin-api');
+    const finding = result.findings.find((f) => f.subject === 'plugin-api' && f.code === 'analysis-incomplete');
+    assert.ok(finding, 'analysis-incomplete expected');
     assert.equal(finding.code, 'analysis-incomplete');
     assert.equal(finding.status, 'unknown');
     assert.equal(statusesFor(result)['plugin-api'], 'unknown');

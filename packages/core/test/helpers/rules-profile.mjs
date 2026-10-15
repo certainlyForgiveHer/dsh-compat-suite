@@ -50,7 +50,7 @@ export function hostIdentity(overrides = {}) {
  * Plugin package manifests land in `store/`, wired through a minimal v9-style
  * lockfile so the C1 readers resolve the same identity the rules judge.
  */
-export function createRulesProfile(plugins) {
+export function createRulesProfile(plugins, options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-compat-rules-'));
 
   const dependencies = {};
@@ -84,6 +84,16 @@ export function createRulesProfile(plugins) {
       ...lockPackages,
     ].join('\n'),
   );
+
+  // Extra non-plugin packages become resolvable peers when a rule needs one.
+  for (const extra of options.store ?? []) {
+    const extraDir = path.join(root, RULES_LAYOUT.storeDir, ...extra.name.split('/'));
+    fs.mkdirSync(extraDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(extraDir, 'package.json'),
+      JSON.stringify({ name: extra.name, version: extra.version }, null, 2) + '\n',
+    );
+  }
 
   for (const plugin of plugins) {
     const pluginDir = path.join(root, RULES_LAYOUT.storeDir, ...plugin.name.split('/'));

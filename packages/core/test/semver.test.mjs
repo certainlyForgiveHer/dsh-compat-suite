@@ -23,11 +23,14 @@ test('parseVersion accepts exact release and prerelease versions', () => {
 
 test('parseVersion rejects non-standard strings instead of coercing them', () => {
   assert.equal(parseVersion('0.1'), null);
-  assert.equal(parseVersion('v1.0.0'), null);
   assert.equal(parseVersion(''), null);
   assert.equal(parseVersion('1.0.0.1'), null);
   assert.equal(parseVersion('latest'), null);
   assert.equal(parseVersion('0.1.1-custom build'), null);
+});
+
+test('a v-prefix normalizes per npm tolerance instead of inventing a different identity', () => {
+  assert.equal(parseVersion('v1.0.0')?.version, '1.0.0');
 });
 
 test('isStandardVersion agrees with parseVersion', () => {
@@ -164,7 +167,7 @@ test('property: comparison is antisymmetric, total on parseable input, and trans
       const ab = compareVersions(a, b);
       const ba = compareVersions(b, a);
       assert.ok(ab !== null && ba !== null, `totality on parseable input: ${a} vs ${b}`);
-      assert.equal(ab, -ba, `antisymmetry: cmp(${a},${b}) = ${ab} but cmp(${b},${a}) = ${ba}`);
+      assert.equal(ab, ba === 0 ? 0 : -ba, `antisymmetry: cmp(${a},${b}) = ${ab} but cmp(${b},${a}) = ${ba}`);
     }
   }
 

@@ -14,7 +14,9 @@ import path from 'node:path';
 import { createRedactor } from './redact.js';
 import { reconcilePlugins } from './reconcile.js';
 import { parseProfileManifest, parsePnpmLock } from './parsers.js';
-import { C1_FINDING_CODES, AGGREGATION_ORDER, defaultProfileLayout } from './inventory-types.js';
+import { FINDING_CODE_REGISTRY, AGGREGATION_ORDER, defaultProfileLayout, aggregateStatus } from './inventory-types.js';
+import { evaluateRules, compareFindingsStable } from './rules.js';
+import type { EvaluateRulesOptions } from './rules.js';
 import type {
   CompatibilityState,
   PluginInventory,
@@ -47,6 +49,9 @@ const STRICT_EXIT: Readonly<Record<CompatibilityState, number>> = Object.freeze(
   scan_error: 4,
 });
 
+/** Re-exported from inventory-types, the single home of the aggregation order. */
+export { aggregateStatus } from './inventory-types.js';
+
 export type Policy = 'advisory' | 'strict';
 
 /** Frozen exit-code table (docs/07 section 3). */
@@ -55,18 +60,6 @@ export function exitCodeFor(state: CompatibilityState, policy: Policy = 'advisor
   const code = table[state];
   if (code === undefined) throw new Error(`unknown compatibility state: ${String(state)}`);
   return code;
-}
-
-/** Most severe state wins; unknown outranks green; validated outranks declared. */
-export function aggregateStatus(states: readonly CompatibilityState[]): CompatibilityState {
-  if (states.length === 0) return 'unknown';
-  let best = AGGREGATION_ORDER.length;
-  for (const state of states) {
-    const rank = AGGREGATION_ORDER.indexOf(state);
-    if (rank === -1) throw new Error(`unknown compatibility state: ${String(state)}`);
-    if (rank < best) best = rank;
-  }
-  return AGGREGATION_ORDER[best];
 }
 
 function sha256Digest(filePath: string): string {
@@ -99,8 +92,8 @@ function severityFor(state: CompatibilityState): 'block' | 'review' | 'info' {
 }
 
 function specFor(code: string): { status: CompatibilityState; evidenceType: ReportEvidence['type'] } {
-  const spec = C1_FINDING_CODES[code];
-  if (spec === undefined) throw new Error(`finding code "${code}" is not registered for C1`);
+  const spec = FINDING_CODE_REGISTRY[code];
+  if (spec === undefined) throw new Error(`finding code "${code}" is not registered`);
   return { status: spec.minStatus, evidenceType: spec.evidenceLevel };
 }
 
@@ -311,6 +304,7 @@ export function scanProfile(profilePath: string, options: ScanProfileOptions = {
     profile,
     plugins,
     findings,
+    actualVersionsByName: reconcile.actualVersions,
     summary: {
       status: summaryStatus,
       blocking: findings.filter((f) => f.blocking).length,
@@ -324,6 +318,8 @@ export interface BuildReportInput {
   readonly scan: ProfileScan;
   readonly host: HostIdentity;
   readonly run: RunMetadata;
+  /** C2 rule-engine options; `enabled: false` restores the C1-only report. */
+  readonly rules?: EvaluateRulesOptions;
 }
 
 export interface BuiltReport {
@@ -416,15 +412,32 @@ export function buildReport(input: BuildReportInput): BuiltReport {
     findings.unshift(materializeFinding(derived, redact));
   }
 
-  const plugins = scan.plugins.map((plugin) =>
-    toReportPlugin({
+  // C2 rule engine. Findings are materialized with the real redactor here, so
+  // every path an evidence carries is aliased before it can reach a report.
+  const rulesOptions = input.rules ?? {};
+  let ruleFindings: ReportFinding[] = [];
+  if (rulesOptions.enabled !== false) {
+    const evaluation = evaluateRules({ scan, host }, { ...rulesOptions, redact });
+    ruleFindings = [...evaluation.findings];
+  }
+  const mergedFindings = [...findings, ...ruleFindings].sort(compareFindingsStable);
+
+  const plugins = scan.plugins.map((plugin) => {
+    const subjectFindings = mergedFindings.filter((f) => f.subject === plugin.name);
+    const smokeOverride = rulesOptions.smokeCoverageByName?.get(plugin.name);
+    const smokeFinding = subjectFindings.find((f) => f.code === 'smoke-passed');
+    return toReportPlugin({
       ...plugin,
-      evidenceIds: findings.filter((f) => f.subject === plugin.name).flatMap((f) => f.evidence.map((e) => e.id)),
-    }),
-  );
+      status: aggregateStatus(subjectFindings.map((f) => f.status)),
+      evidenceIds: subjectFindings.flatMap((f) => f.evidence.map((e) => e.id)),
+      smokeCoverage: smokeOverride
+        ? { ...smokeOverride, evidenceIds: smokeFinding === undefined ? [] : smokeFinding.evidence.map((e) => e.id) }
+        : plugin.smokeCoverage,
+    });
+  });
 
   const hostAndPluginStates = [
-    ...findings.filter((f) => f.subject === 'host').map((f) => f.status),
+    ...mergedFindings.filter((f) => f.subject === 'host').map((f) => f.status),
     ...plugins.map((p) => p.status),
   ];
   const summaryStatus = aggregateStatus(hostAndPluginStates);
@@ -441,11 +454,11 @@ export function buildReport(input: BuildReportInput): BuiltReport {
     },
     profile: scan.profile,
     plugins,
-    findings,
+    findings: mergedFindings,
     summary: {
       status: summaryStatus,
-      blocking: findings.filter((f) => f.blocking).length,
-      review: findings.filter((f) => f.severity === 'review' && !f.blocking).length,
+      blocking: mergedFindings.filter((f) => f.blocking).length,
+      review: mergedFindings.filter((f) => f.severity === 'review' && !f.blocking).length,
     },
   };
 

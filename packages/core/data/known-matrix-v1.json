@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "host": { "version": "0.1.1-rc.2" },
+      "plugin": { "name": "@nanmicoder/dsh-agent-teams", "version": "0.1.15" },
+      "decision": "deny",
+      "verification": "incident-static",
+      "reason": "K01 事故（docs/04 §5）：AgentTeams 0.1.15 的 bundle 调用 ctx.subagents.registerContinuableSetup，宿主 0.1.1-rc.2 未提供该 API，loader 加载失败。静态复核依据 fixtures/sources.lock.json 登记的工件。",
+      "source": "fixtures/sources.lock.json#agent-teams-0.1.15",
+      "artifactDigest": "sha512-TfyzwBe4yToJmUGLvJq+iqgxv8HkWCOdmdPNAs0LwX5Do9RMHer1auPS29rorSqxwTF2jINcgokRq9CIa/q2Cg==",
+      "verifiedAt": "2026-09-07"
+    },
+    {
+      "host": { "version": "0.1.1-rc.2" },
+      "plugin": { "name": "@nanmicoder/dsh-agent-teams", "version": "0.1.2" },
+      "decision": "allow",
+      "verification": "incident-baseline-static",
+      "reason": "K02 基线（docs/04 §5）：0.1.2 是该宿主上的历史可启动版本；静态 allow 只支持 declared_compatible，不含业务探针，不得当作功能验证。",
+      "source": "docs/04-validation-plan.md §5 K02",
+      "verifiedAt": "2026-09-07"
+    }
+  ]
+}

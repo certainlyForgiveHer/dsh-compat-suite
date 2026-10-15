@@ -103,6 +103,7 @@ export function reconcilePlugins(
       loaderIds: loaderState.loaderIds,
       ambiguous,
       reconcileCode,
+      packageDirs: actualEntry?.paths ?? [],
     });
   }
 

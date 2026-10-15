@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { buildReport, exitCodeFor, scanProfile } from './report.js';
+import type { EvaluateRulesOptions } from './rules.js';
 import { resolveHost } from './host.js';
 import type { HostIdentity, ProfileLayout, Report, RunMetadata } from './inventory-types.js';
 import type { Policy } from './report.js';
@@ -39,6 +40,8 @@ export interface RunScanOptions {
   readonly tmpPaths?: readonly string[];
   readonly exposePaths?: boolean;
   readonly policy?: Policy;
+  /** C2 rule-engine options (matrix, clock, API corpus injection, smoke seam). */
+  readonly rules?: EvaluateRulesOptions;
   /** Override where profile artifacts are looked for (tests use synthetic fixtures). */
   readonly layout?: ProfileLayout;
 }
@@ -85,7 +88,7 @@ export function runScan(options: RunScanOptions): RunScanResult {
   });
 
   const run = options.run ?? makeRunMetadata();
-  const built = buildReport({ scan, host, run });
+  const built = buildReport({ scan, host, run, ...(options.rules === undefined ? {} : { rules: options.rules }) });
 
   return {
     report: built.report,
